@@ -1,0 +1,479 @@
+<template>
+  <div class="ProductList">
+    <div v-show="product">
+    <Form :label-width="80" style="padding-top:20px;">
+      <div class="FormItem">
+        <FormItem label="产品名称" class="FormItem_inp">
+          <Input v-model="Inquire.productName" placeholder="请输入产品名称、标题"></Input>
+        </FormItem>
+        <FormItem label="产品编码" class="FormItem_inp">
+          <Input v-model="Inquire.productCode" placeholder="请输入产品编码"></Input>
+        </FormItem>
+        <FormItem label="商家名称" class="FormItem_inp">
+          <Input v-model="Inquire.enterpriseName" placeholder="请输入商家名称"></Input>
+        </FormItem>
+      </div>
+      <div class="FormItem">
+        <FormItem label="产品状态" class="FormItem_inp">
+          <Select v-model="Inquire.status" clearable>
+            <Option v-for="item in statusList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="是否真实" class="FormItem_inp">
+          <Select v-model="Inquire.isReally" clearable>
+            <Option v-for="item in reallyList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="API类型" class="FormItem_inp">
+          <Select v-model="Inquire.apiConfig" clearable>
+            <Option v-for="item in apiList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+      </div>
+    </Form>
+    <div style="text-align:center;margin-bottom:10px;">
+      <Button type="success" @click="getList">搜索</Button>
+    </div>
+    
+      <Table style="margin-bottom:8px;" border :loading="loading" :columns="TableTop" :data="tableData"></Table>
+      <Page width="100%" @on-change="chang" :total="total" show-elevator style="text-align:right"></Page>
+    </div>
+    
+    <Modal
+      v-model="productInfoShow"
+      title="产品详情"
+      width="740px">
+          <p ref="imgs" style="text-align:center;"></p>
+          <p ref="editor"></p>
+    </Modal>
+    <!-- 套餐列表 -->
+      <div style="margin-top:10px;" v-show="productPackage">
+          <h3 style="padding: 8px 5px;">产品名称：{{productName}}</h3>
+          <Table highlight-row  ref="currentRowTable" :columns="ProductTop" :data="ProductList" ></Table>
+          <!-- <div style="text-align:right;">
+            <Page  :total="total"   :current.sync="pageNum"  :pageSize="pagesize"   show-elevator></Page>
+          </div>       -->
+          <Button type="success" style="margin: 8px 8px;" @click="back">返回</Button>
+      </div>
+  </div>
+</template>
+<script>
+import {getDate} from "../../../js/public";
+  export default {
+    data() {
+      return {
+        loading: true,
+        productInfoShow: false,
+        productInfo: {},
+        productPackage: false,
+        product: true,
+        productName: "",
+        Inquire: {
+          pageNum: 1,
+          productName: null,
+          enterpriseName: null,
+          productCode: null,
+          status: null,
+          isReally: null,
+          apiConfig: null
+        },
+        statusList: [
+          {label: "上架", value: "1"},
+          {label: "下架", value: "0"}
+        ],
+        reallyList: [
+          {label: "真实", value: "1"},
+          {label: "虚拟", value: "0"}
+        ],
+        apiList: [
+          {label: "同游平台", value: "TONGYOU"},
+          {label: "智游宝", value: "ZYB"}
+        ],
+        total: 0,
+        tableData: [],
+        TableTop: [
+          {
+            title: "产品名称",
+            key: "productName",
+            align: "center",
+            width: 140,
+            fixed: "left"
+          },
+          {
+            title: "ID",
+            key: "productId",
+            align: "center"
+          },
+          {
+            title: "产品标题",
+            key: "productTitle",
+            align: "center"
+          },
+          {
+            title: "产品编码",
+            key: "productCode",
+            align: "center"
+          },
+          {
+            title: "地址",
+            key: "address",
+            align: "center"
+          },
+          {
+            title: "产品状态",
+            key: "status",
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              let icon = "";
+              let color = "";
+              if (params.row.status === 0) {
+                text = "下架";
+                icon = "android-arrow-dropdown-circle";
+                color = "red"
+              } else {
+                text = "上架";
+                icon = "android-arrow-dropup-circle";
+                color = "green"
+              }
+              return h("div", [
+                h("Icon", {
+                  props: {
+                    type: icon,
+                    color: color
+                  }
+                }),
+                h("strong", {
+                  style: {
+                    color: color
+                  }
+                }, text)
+              ]);
+            }
+          },
+          {
+            title: "是否真实",
+            key: "isReally",
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              if (params.row.isReally === 0) {
+                text = "虚拟";
+              } else {
+                text = "真实";
+              }
+              return h("div", [
+                h("strong", text)
+              ]);
+            }
+          },
+          {
+            title: "API类型",
+            key: "apiConfig",
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              let color = "";
+              if (params.row.apiConfig === "ZYB") {
+                text = "智游宝";
+                color = "red"
+              } else {
+                text = "同游平台";
+                color = "green"
+              }
+              return h("div", [
+                h("strong", {
+                  style: {
+                    color: color
+                  }
+                }, text)
+              ]);
+            }
+          },
+          {
+            title: "是否实名制",
+            key: "isRealName",
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              let color = "";
+              if (params.row.isRealName === 0) {
+                text = "否";
+                color = "green";
+              } else {
+                text = "是";
+                color = "red";
+              }
+              return h("div", [
+                h("Icon", {
+                  props: {
+                    type: "person",
+                    color: color
+                  }
+                }),
+                h("strong", text)
+              ]);
+            }
+          },
+          {
+            title: "商家名称",
+            key: "enterpriseName",
+            align: "center",
+            fixed: "right"
+          },
+          {
+            title: "操作",
+            key: "操作",
+            align: "center",
+            width: 140,
+            fixed: "right",
+            render: (h, params) => {
+              return h("div", [
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: "primary",
+                      size: "small"
+                    },
+                    style: {
+                      marginRight: "5px"
+                    },
+                    on: {
+                      click: () => {
+                        this.getProductInfo(params.row.productId,params.row.productName)
+                      }
+                    }
+                  },
+                  "产品详情"
+                )
+              ]);
+            }
+          }
+        ],
+        ProductList: [],
+        ProductTop: [
+        {
+          title: "套餐名称",
+          key: "packageName",
+          align: "center",
+          width: 150,
+          fixed: "left"
+        },
+        {
+          title: "套餐类型",
+          key: "productPackageTypeId",
+          width: 130,
+          align: "center",
+          render: (h, par) => {
+            let type = par.row.productPackageTypeRelativeList;
+            let text = "";
+            // for (let i = 0; i < this.PackageType.length; i++) {
+              for (let k = 0; k < type.length; k++) {
+                // if (type[k].productPackageTypeId == this.PackageType[i].value) {
+                  text += type[k].typeName + "|";
+                // }
+              // }
+            }
+           return h("div", [
+                h("strong", text)
+            ]);
+          }
+        },
+        {
+          title: "销售价",
+          key: "salePrice",
+          width: 130,
+          align: "center"
+        },
+        {
+          title: "结算价",
+          key: "settlementPrice",
+          width: 130,
+          align: "center"
+        },
+        {
+          title: "平台佣金",
+          key: "platformCommission",
+          width: 130,
+          align: "center"
+        },
+        {
+          title: "默认代理佣金",
+          key: "defaultAgentCommission",
+          width: 130,
+          align: "center"
+        },
+        {
+          title: "默认业务佣金",
+          key: "defaultSaleCommission",
+          width: 130,
+          align: "center"
+        },
+        {
+          title: "销售开始时间",
+          width: 130,
+          key: "startDate",
+          align: "center",
+          render: (h, par) => {
+            return h("div", [
+                h("strong", getDate(par.row.startDate))
+            ]);
+          }
+        },
+        {
+          title: "销售结束日期",
+          width: 130,
+          key: "endDate",
+          align: "center",
+          render: (h, par) => {
+            return h("div", [
+                h("strong", getDate(par.row.endDate))
+            ]);
+          }
+        },
+        {
+          title: "截止销售时间",
+          width: 130,
+          key: "endSaleStr",
+          align: "center"
+        },
+        {
+          title: "退款",
+          key: "refundType",
+          width: 130,
+          align: "center",
+          render: (h, par) => {
+            let text = "";
+            if (par.row.refundType == "REFUND") {
+              text = "条件退";
+            } else {
+              text ="概不退换";
+            }
+            return h("div", [
+                h("strong", text)
+            ]);
+          }
+        },
+        {
+          title: "操作",
+          key: "startDate",
+          width: 165,
+          fixed: "right",
+          align: "center",
+          render: (h, params) => {
+            return h("div", [
+              h('Button', {
+                props: {
+                    type: 'primary',
+                    size: 'small',
+                },
+                style: {
+                    marginRight: '5px'
+                },
+                on: {
+                    click: () => {
+                    this.ModelImg(params.row.coverImg)
+                    }
+                }
+              },"海报"),
+              h(
+                "Button",
+                {
+                  props: {
+                    type: "success",
+                    size: "small"
+                  },
+                  style: {
+                    marginRight: "5px"
+                  },
+                  on: {
+                    click: () => {
+                      this.PackageEditor(params.row.detail);
+                    }
+                  }
+                },
+                "富文本"
+              ),
+            ]);
+          }
+        }
+      ],
+      };
+    },
+    methods: {
+      chang(pageNum) {
+        this.Inquire.pageNum = pageNum;
+        this.getList();
+      },
+      //查询列表
+      getList() {
+        this.loading = true;
+        this.axios.get(`${this.AjaxUrl}/ty_manage/product/getList`, {
+          params: this.Inquire
+        }).then(res => {
+          this.tableData = res.data.list;
+          this.total = res.data.total;
+          this.loading = false;
+        }).catch(err => {
+          console.log(err);
+          this.loading = false;
+        });
+      },
+      //海报图片
+      ModelImg(img) {
+        this.productInfoShow = true;
+        let poster = `<img  style="width: 180px;height:225px;" src="${this.imgUrl}${img}.jpg"/>`;
+        this.$refs.editor.innerHTML = "";
+        this.$refs.imgs.innerHTML = poster;
+      },
+      //富文本
+      PackageEditor(detail) {
+        this.productInfoShow = true;
+        this.$refs.imgs.innerHTML = "";
+        this.$refs.editor.innerHTML = detail;
+      },
+      //产品详情
+      getProductInfo(productId,productName) {
+        this.productPackage = true;
+        this.product = false;
+        this.axios.get(`${this.AjaxUrl}/ty_manage/product/package/getList`, {
+          params: {
+            productId: productId
+          }
+        }).then(res => {
+          console.log(res);
+          this.ProductList = res.data.list;
+          this.productName = productName;
+        }).catch(err => {
+          console.log(err);
+        });
+      },
+      //返回
+      back() {
+        this.productPackage = false;
+        this.product = true;
+      }
+    },
+    mounted() {
+      this.getList();
+    }
+  };
+</script>
+
+<style scoped>
+  .ProductList {
+    background: #fff;
+    padding: 0 20px;
+  }
+
+  .FormItem {
+    display: flex;
+  }
+
+  .FormItem_inp {
+    width: 300px;
+    flex: 1;
+  }
+</style>
+

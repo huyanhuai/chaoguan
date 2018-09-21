@@ -1,0 +1,842 @@
+<template>
+  <div class="AgentList">
+    <Spin size="large" fix v-show="spinShow"></Spin>
+    <big-img v-if="bigImg" @clickit="viewImg" :imgSrc="bigImgSrc"></big-img>
+    <div v-show="AgentShow">
+      <Form :label-width="100" style="padding-top:20px;">
+        <div class="FormItem">
+          <FormItem label="代理商线下布局" class="FormItem_inp">
+            <!-- <Input v-model="Inquire.companyName" clearable placeholder="请输入企业名称，企业简称，用户名"></Input> -->
+            <Select clearable v-model="searchCriteria">
+                <Option  value="1" key="1" @click.native="grabble(true)">已布局</Option>
+                <Option  value="0" key="0" @click.native="grabble(false)">未布局</Option>
+            </Select> 
+          </FormItem>
+          <FormItem label="法人姓名" class="FormItem_inp">
+            <Input v-model="Inquire.legalRepresentativeName" clearable placeholder="请输入法人姓名"></Input>
+          </FormItem>
+          <FormItem label="法人手机号" class="FormItem_inp">
+            <Input v-model="Inquire.legalRepresentativeMobile" clearable placeholder="请输入身份证号"></Input>
+          </FormItem>
+        </div>
+      </Form>
+      <div style="text-align:center;margin-bottom:10px;">
+        <Button type="success" @click="search">搜索</Button>
+      </div>
+      <Table style="margin-bottom:8px;" border :loading="dataLoading" :columns="TableTop" :data="tableData"></Table>
+      <Page width="100%" @on-change="chang" :total="total" :current.sync="Inquire.pageNum" :pageSize="pageSize" show-elevator style="text-align:right"></Page>
+    </div>
+    <div v-show="infoShow">
+      <div class="datalist" style="margin:8px 0;">
+        <Button type="info" @click="back">返回</Button>
+      </div>
+      <div class="datalist">
+        <strong>头像：</strong>
+        <p><Avatar :src="this.imgUrl+agentInfo.headImg+'_small.jpg'" style="max-height: 50px; max-width: 50px"></Avatar></p>
+        <strong>绑定手机号：</strong>
+        <p>{{agentInfo.mobile}}</p>
+      </div>
+      <div class="datalist">
+        <strong>用户姓名：</strong>
+        <p>{{agentInfo.userName}}</p>
+        <strong>用户昵称：</strong>
+        <p>{{agentInfo.nickName}}</p>
+      </div>
+      <div class="datalist">
+        <strong>企业名称：</strong>
+        <p>{{agentInfo.companyName}}</p>
+        <strong>企业简称：</strong>
+        <p>{{agentInfo.shortName}}</p>
+      </div>
+      <div class="datalist">
+        <strong>唯一社会信用代码：</strong>
+        <p>{{agentInfo.socialCreditCode}}</p>
+        <strong>注册资本（万元）：</strong>
+        <p>{{agentInfo.registeredAssets}}</p>
+      </div>
+      <div class="datalist">
+        <strong>法人姓名：</strong>
+        <p>{{agentInfo.legalRepresentativeName}}</p>
+        <strong>法人电话：</strong>
+        <p>{{agentInfo.legalRepresentativeMobile}}</p>
+      </div>
+      <div class="datalist">
+        <strong>开户账号：</strong>
+        <p>{{agentInfo.bankAccount}}</p>
+        <strong>具体地址：</strong>
+        <p>{{agentInfo.companyAddress}}</p>
+      </div>
+      <div class="datalist">
+        <strong>旅行社营业许可证：</strong>
+        <p>
+          <img class="imgInfo" :src="this.imgUrl+agentInfo.travelAgencyLicenceImgurl + '_small.jpg'" @click="clickImg(agentInfo.travelAgencyLicenceImgurl)"/>
+        </p>
+        <strong>营业执照图片:</strong>
+        <p>
+          <img class="imgInfo" :src="this.imgUrl+agentInfo.businessLicenseImgurl + '_small.jpg'" @click="clickImg(agentInfo.businessLicenseImgurl)"/>
+        </p>
+      </div>
+      <div class="datalist">
+        <strong>身份证正面：</strong>
+        <p>
+          <img class="imgInfo" :src="this.imgUrl+agentInfo.identityCardFrontImgurl + '_small.jpg'" @click="clickImg(agentInfo.identityCardFrontImgurl)"/>
+        </p>
+        <strong>身份证反面:</strong>
+        <p>
+          <img class="imgInfo" :src="this.imgUrl+agentInfo.identityCardReverseImgurl + '_small.jpg'" @click="clickImg(agentInfo.identityCardReverseImgurl)"/>
+        </p>
+      </div>
+      <Table style="margin-bottom:8px;" border :loading="loading" :columns="businessTableTop" :data="agentInfo.businessAgentUserList"></Table>
+    </div>
+    <Modal
+        v-model="modal1"
+        title="二维码"
+        @on-ok="ok1"
+        @on-cancel="cancel">
+        <qrcode-vue 
+          size="200" 
+          :value="qrText" 
+          style="text-align:center;"
+        ></qrcode-vue>
+    </Modal> 
+    <!-- 数据弹框 -->
+    <Modal
+        v-model="modal2"
+        title="数据">
+        <div>
+          <Form :label-width="158">
+          <div class="">
+            <FormItem label="代理商线下布局地址" class="">
+              <Input v-model="agentData.userAddress" clearable  placeholder="请输入代理商线下布局地址"></Input>
+            </FormItem>
+            <FormItem label="大海报桌牌投放数量" class="">
+              <Input v-model="agentData.bigPosterCount" clearable placeholder="请输入大海报桌牌投放数量"></Input>
+            </FormItem>
+            <FormItem label="小海报桌牌投放数量" class="">
+              <Input v-model="agentData.smallPosterCount" clearable placeholder="请输入小海报桌牌投放数量"></Input>
+            </FormItem>
+          </div>
+          <div class="">
+            <FormItem label="代理商店铺浏览数：" class="">
+              <span>{{agentData.pvCount}}</span>
+            </FormItem>
+            <FormItem label="海报分享数量：" class="">
+              <span>{{agentData.sharePosterCount}}</span>
+            </FormItem>
+            <FormItem label="链接分享数量：" class="">
+              <span>{{agentData.shareLinkCount}}</span>
+            </FormItem>
+            <FormItem label="个人海报二维码分享数量：" class="" style="width:130px;">
+              <span>{{agentData.sharePosterCodeCount}}</span>
+            </FormItem>
+          </div>
+        </Form>
+        </div>
+        <div slot="footer">
+          <Button type="text" size="large" @click="agentDataCancel">取消</Button>
+          <Button type="primary" size="large" :loading="agentLoading"  @click="agentDataSub">确认</Button>
+      </div>
+    </Modal> 
+    <!-- 代理商家列表 -->
+    <div v-show="AgentListShow">
+        <Button type="info" style="margin:8px 0;" @click="back" >返回</Button>
+        <h3>代理商：{{companyName}}</h3>
+        <Table style="margin:8px 0;" border :columns="AgentListTop" :data="AgentListData"></Table>
+        <Page width="100%" @on-change="AgentListChang" :current.sync="AgentListPageNum" :pageSize="pageSize" :total="AgentListTotal" show-elevator style="text-align:right"></Page>
+    </div>
+    <!-- 业务员列表 -->
+    <div v-show="salesman">
+      <Button type="info" style="margin:8px 0;" @click="back">返回</Button>
+      <h3>代理商：{{companyName}}</h3>
+      <Table style="margin:8px 0;" border :columns="salesmanTop" :data="salesmanData"></Table>
+    </div>
+  </div>
+</template>
+<script>
+  import BigImg from '../../module/BigImg.vue';
+  import QrcodeVue from 'qrcode.vue';
+  import {getDate,shm,getDate0} from "../../../js/public";
+  export default {
+    data() {
+      return {
+        salesman: false,
+        AgentListShow: false,
+        agentLoading: false,
+        loading: false,
+        dataLoading: false,
+        AgentShow: true,
+        infoShow: false,
+        spinShow: false,
+        bigImg: false,
+        modal1: false,
+        modal2: false,
+        hasUndeline: false,
+        searchCriteria: "",
+        companyName: "",
+        qrText: "",
+        index: null,
+        agentCountId: "",
+        AgentListPageNum: 1,
+        pageSize: 10,
+        AgentListTotal: null,
+        agentData: {
+          bigPosterCount: "",
+          smallPosterCount: "",
+          userAddress: "",
+          pvCount: "",
+          sharePosterCount: "",
+          shareLinkCount: "",
+          sharePosterCodeCount: ""
+        },
+        Inquire: {
+          pageNum: 1,
+          // companyName: "",
+          legalRepresentativeName: "",
+          legalRepresentativeMobile: ""
+        },
+        total: 0,
+        agentInfo: {
+          userName: "",
+          nickName: "",
+          headImg: "",
+          mobile: "",
+          companyName: "",
+          shortName: "",
+          companyAddress: "",
+          legalRepresentativeName: "",
+          legalRepresentativeMobile: "",
+          travelAgencyLicenceImgurl: "",
+          businessLicenseImgurl: "",
+          identityCardFrontImgurl: "",
+          identityCardReverseImgurl: "",
+          bankAccount: "",
+          businessAgentUserList:[]
+        },
+        tableData: [],
+        TableTop: [
+          {
+            title: "企业名称/个人",
+            key: "companyName",
+            align: "center",
+            width: 135,
+            fixed: "left",
+            render: (h, params) => {
+              let text = "";
+              if(params.row.companyType == "PERSONAL") {
+                text = "个人";
+              }else {
+                text = params.row.companyName;
+              }
+              return h("div", [
+                h("strong", text)
+              ]);
+            }
+          },
+          {
+            title: "具体地址",
+            key: "companyAddress",
+            align: "center"
+          },
+          {
+            title: "法定代表人姓名",
+            key: "legalRepresentativeName",
+            align: "center"
+          },
+          {
+            title: "法人手机号",
+            key: "legalRepresentativeMobile",
+            align: "center"
+          },
+          {
+            title: "昵称",
+            key: "nickName",
+            align: "center"
+          },
+          {
+            title: "注册手机号",
+            key: "mobile",
+            align: "center"
+          },
+          {
+            title: "开户账号",
+            key: "bankAccount",
+            align: "center"
+          },
+          // {
+          //   title: "代理审核状态",
+          //   key: "status",
+          //   align: "center",
+          //   render: (h, params) => {
+          //     let text = "";
+          //     if (params.row.status == "INIT") {
+          //       text = "初始";
+          //     } else if (params.row.status == "SUCCESS") {
+          //       text = "审核通过";
+          //     } else {
+          //       text = "审核不通过";
+          //     }
+          //     return h("div", [
+          //       h("Icon", {
+          //         props: {
+          //           type: "person"
+          //         }
+          //       }),
+          //       h("strong", text)
+          //     ]);
+          //   }
+          // },
+          {
+            title: "头像",
+            key: "legalRepresentativeMobile",
+            width: 70,
+            align: "center",
+            render: (h, params) => {
+              let text = params.row.headImg;
+              if (text.indexOf("http") < 0) {
+                text = this.imgUrl + params.row.headImg + "_small.jpg"
+              }
+              return h("div", [
+                h("Avatar", {
+                  props: {
+                    src: text
+                  }
+                })
+              ]);
+            }
+          },
+          {
+            title: "详情",
+            key: "legalRepresentativeMobile",
+            width: 70,
+            align: "center",
+            render: (h, params) => {
+              return h("div", [
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: "primary",
+                      size: "small"
+                    },
+                    on: {
+                      click: () => {
+                        this.detailed(params.index,params.row.agentUserInfoId);
+                      }
+                    }
+                  },
+                  "查看"
+                ),
+              ]);
+            }
+          },
+          {
+            title: "数据统计",
+            key: "legalRepresentativeMobile",
+            width: 95,
+            align: "center",
+            render: (h, params) => {
+              return h("div", [
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: "primary",
+                      size: "small"
+                    },
+                    on: {
+                      click: () => {
+                        this.AgentDataModel(params.index);
+                      }
+                    }
+                  },
+                  "查看/编辑"
+                ),
+              ]);
+            }
+          },
+          {
+            title: "操作",
+            key: "legalRepresentativeMobile",
+            align: "center",
+            width: 280,
+            fixed: "right",
+            render: (h, params) => {
+              return h("div", [
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: "primary",
+                      size: "small"
+                    },
+                    style: {
+                      marginRight: "5px",
+                      marginBottom: "5px"
+                    },
+                    on: {
+                      click: () => {
+                        this.qrcode(params.row.userId);
+                      }
+                    }
+                  },
+                  "代理店铺码"
+                ),
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: "primary",
+                      size: "small"
+                    },
+                    style: {
+                      marginRight: "5px",
+                      marginBottom: "5px"
+                    },
+                    on: {
+                      click: () => {
+                        this.AgentList(params.index);
+                      }
+                    }
+                  },
+                  "代理商家"
+                ),
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: "primary",
+                      size: "small"
+                    },
+                    style: {
+                      marginRight: "5px",
+                      marginBottom: "5px"
+                    },
+                    on: {
+                      click: () => {
+                        this.salesmanList(params.index);
+                      }
+                    }
+                  },
+                  "业务员列表"
+                ),
+              ]);
+            }
+          }
+        ],
+        businessTableTop: [
+          {
+            title: '代理商家',
+            align: 'center',
+            children: [
+              {
+                title: "企业名称",
+                key: "enterpriseName",
+                align: "center"
+              },
+              {
+                title: "地址",
+                key: "specificAddress",
+                align: "center"
+              },
+              {
+                title: "法人姓名",
+                key: "legalRepresentativeName",
+                align: "center"
+              },
+              {
+                title: "法人手机号",
+                key: "legalRepresentativeMobile",
+                align: "center"
+              },
+              {
+                title: "关系",
+                key: "status",
+                align: "center",
+                render: (h, params) => {
+                  let text = "";
+                  let color = "";
+                  switch (params.row.status) {
+                    case "INIT":
+                      text = "审核中";
+                      break;
+                    case "SUCCESS":
+                      text = "代理中";
+                      color = "green";
+                      break;
+                    case "FAIL":
+                      text = "审核不通过";
+                      color = "red";
+                      break;
+                    case "MASK":
+                      text = "屏蔽";
+                      color = "red";
+                      break;
+                  }
+                  return h("div", [
+                    h("strong", {style: {color: color}}, text)
+                  ]);
+                }
+              }
+            ]
+          }
+        ],
+        AgentListData: [],
+        AgentListTop: [
+          {
+            title: "企业名称",
+            key: "enterpriseName",
+            align: "center"
+          },
+          {
+            title: "地址",
+            key: "specificAddress",
+            align: "center"
+          },
+          {
+            title: "法人姓名",
+            key: "legalRepresentativeName",
+            align: "center"
+          },
+          {
+            title: "法人手机号",
+            key: "legalRepresentativeMobile",
+            align: "center"
+          },
+        ],
+        salesmanData: [],
+        salesmanTop: [
+          {
+            title: "昵称",
+            key: "nickName",
+            align: "center",
+            width: 140,
+            fixed: "left",
+          },
+          {
+            title: "姓名",
+            key: "userName",
+            align: "center"
+          },
+          {
+            title: "手机号",
+            key: "mobile",
+            align: "center"
+          },
+          {
+          title: "来源",
+          key: "source",
+          align: "center",
+          render: (h, params) => {
+            let text = "";
+            if(params.row.source == "WECHAT_PUBLIC") {
+              text = "公众号";
+            }else{
+              text = "iOS";
+            }
+            return h("div", [h("strong", text)]);
+          }
+        },
+          {
+            title: "头像",
+            key: "headImg",
+            width: 80,
+            align: "center",
+            render: (h, params) => {
+              let text = params.row.headImg;
+              if (text.indexOf("http") < 0) {
+                text = this.imgUrl + params.row.headImg + "_small.jpg"
+              }
+              return h("div", [
+                h("Avatar", {
+                  props: {
+                    src: text
+                  }
+                })
+              ]);
+            }
+          },
+          {
+            title: "创建时间",
+            key: "createTime",
+            align: "center",
+            render: (h, par) => {
+              return h("div", [
+                  h("strong", getDate0(par.row.createTime))
+              ]);
+            }
+        },
+        ]
+      };
+    },
+    methods: {
+      ok1() {},
+      cancel() {},
+      // 二维码
+      qrcode(userId) {
+        this.modal1 = true;
+        this.axios
+          .get(`${this.AjaxUrl}/ty_manage/agent/user/info/getAgentShopCode`, {
+            params: {
+              userId: userId
+            }
+          })
+          .then(res => {
+            if (res.errorCode === 200) {
+              this.qrText = res.data;
+            } else {
+              this.$Message.error(res.message);
+            }
+          })
+          .catch(err => {
+            console.log(err);
+          });
+      },
+      // 代理商查询
+      grabble(bool) {
+        this.dataLoading = true;
+        this.hasUndeline = bool;
+        let data = {};
+        data.hasUndeline = this.hasUndeline;
+        data.pageNum = this.Inquire.pageNum;
+        data.pageSize = this.pageSize;
+        this.axios
+          .post(`${this.AjaxUrl}/ty_manage/agent/count/searchAgentCount`, this.qs.stringify(data))
+          .then(res => {
+              if (res.errorCode === 200) {
+                this.tableData = res.data.list;
+                this.total = res.data.total;
+                this.dataLoading = false;
+              }
+          })
+          .catch(err => {
+            this.dataLoading = false;
+              console.log(err);
+          });
+      },
+      agentDataCancel() {
+        this.modal2 = false;
+      },
+      // 运营数据弹框
+      AgentDataModel(index) {
+        this.modal2 = true;
+        let data = {};
+        data.agentUserInfoId = this.tableData[index].agentUserInfoId;
+        this.axios
+          .post(`${this.AjaxUrl}/ty_manage/agent/count/getAgentCount`, this.qs.stringify(data))
+          .then(res => {
+              if (res.errorCode === 200) {
+                this.agentData = res.data;
+                this.agentCountId = res.data.agentCountId;
+                console.log(this.agentData);
+              }
+          })
+          .catch(err => {
+              console.log(err);
+          });
+      },
+      // 数据提交
+      agentDataSub() {
+        this.agentLoading = true;
+        let data = {};
+        data.agentCountId = this.agentCountId;
+        data.bigPosterCount = this.agentData.bigPosterCount;
+        data.smallPosterCount = this.agentData.smallPosterCount;
+        data.userAddress = this.agentData.userAddress;
+        this.axios
+          .post(`${this.AjaxUrl}/ty_manage/agent/count/update`, this.qs.stringify(data))
+          .then(res => {
+              if (res.errorCode === 200) {
+                this.modal2 = false;
+                this.agentLoading = false;
+                this.$Modal.success({
+                    title: "提示",
+                    content: '<h3>操作成功</h3>'
+                });
+              }else{
+                this.agentLoading = false;
+                this.$Message.error(res.message);
+              }
+          })
+          .catch(err => {
+              this.agentLoading = false;
+              console.log(err);
+          });
+      },
+      AgentListChang(pageNum) {
+        this.AgentListPageNum = pageNum;
+        this.AgentList(this.index);
+      },
+      // 代理商的代理商家列表
+      AgentList(index) {
+        this.AgentListShow = true;
+        this.salesman = false;
+        this.AgentShow = false;
+        this.infoShow = false;
+        this.index = index;
+        if(this.tableData[index].companyName == "" || this.tableData[index].companyName == null){
+          this.companyName = this.tableData[index].legalRepresentativeName;
+        }else {
+          this.companyName = this.tableData[index].companyName;
+        }
+        let data = {};
+        data.pageNum = this.AgentListPageNum;
+        data.pageSize = this.pageSize;
+        data.agentUserInfoId = this.tableData[index].agentUserInfoId;
+        this.axios
+          .post(`${this.AjaxUrl}/ty_manage/business/user/info/getListByAgent`, this.qs.stringify(data))
+          .then(res => {
+              if (res.errorCode === 200) {
+                this.AgentListData = res.data.list;
+                this.AgentListTotal = res.data.total;
+                console.log(this.AgentListData);
+              }
+          })
+          .catch(err => {
+              console.log(err);
+          });
+      },
+      // 业务员列表
+      salesmanList(index) {
+        this.salesman = true;
+        this.AgentShow = false;
+        this.AgentListShow = false;
+        this.infoShow = false;
+        if(this.tableData[index].companyName == "" || this.tableData[index].companyName == null){
+          this.companyName = this.tableData[index].legalRepresentativeName;
+        }else {
+          this.companyName = this.tableData[index].companyName;
+        }
+        let data = {};
+        data.agentUserInfoId = this.tableData[index].agentUserInfoId;
+        this.axios
+          .post(`${this.AjaxUrl}/ty_manage/agent/user/info/getSalesmanListByAgent`, this.qs.stringify(data))
+          .then(res => {
+              if (res.errorCode === 200) {
+                this.salesmanData = res.data.list;
+                console.log(this.salesmanData);
+              }
+          })
+          .catch(err => {
+              console.log(err);
+          });
+      },
+      // 详情
+      detailed(index,agentUserInfoId) {
+        this.AgentShow = false;
+        this.infoShow = true;
+        this.spinShow = true;
+        console.log(agentUserInfoId);
+        this.axios
+          .get(`${this.AjaxUrl}/ty_manage/agent/user/info/getDetail`, {
+            params: {
+              agentUserInfoId: agentUserInfoId
+            }
+          })
+          .then(res => {
+            if (res.errorCode === 200) {
+              this.agentInfo = res.data;
+            } else {
+              this.$Message.error(res.message);
+            }
+          })
+          .catch(err => {
+            console.log(err);
+          });
+        this.spinShow = false;
+      },
+      // 分页
+      chang(pageNum) {
+        this.Inquire.pageNum = pageNum;
+        if(this.searchCriteria != "") {
+          this.grabble(this.hasUndeline);
+        }else{
+          this.Comfort();
+        }
+        
+      },
+      // 搜索
+      search() {
+        this.Inquire.pageNum = 1;
+        this.Comfort();
+      },
+      Comfort() {
+        this.searchCriteria = "";
+        this.dataLoading = true;
+        let data = this.Inquire;
+        this.axios
+          .get(`${this.AjaxUrl}/ty_manage/agent/user/info/getList`, {
+            params: data
+          })
+          .then(res => {
+            if (res.errorCode === 200) {
+              this.tableData = res.data.list;
+              this.total = res.data.total;
+            } else {
+              this.$Message.error(res.message);
+            }
+            this.dataLoading = false;
+          })
+          .catch(err => {
+            console.log(err);
+            this.dataLoading = false;
+          });
+      },
+      clickImg(e) {
+        this.bigImg = true;
+        // 获取当前图片地址
+        this.bigImgSrc = this.imgUrl + e + ".jpg";
+      },
+      back() {
+        this.AgentShow = true;
+        this.infoShow = false;
+        this.salesman = false;
+        this.AgentListShow = false;
+        // this.agentInfo = {};
+      },
+      viewImg(){
+        this.bigImg = false;
+      },
+    },
+    mounted() {
+      this.Comfort();
+    },
+    components: {
+      'big-img':BigImg,
+      QrcodeVue
+    },
+  };
+</script>
+
+<style scoped>
+  .AgentList {
+    background: #fff;
+    padding: 0 20px;
+  }
+
+  .FormItem {
+    display: flex;
+  }
+
+  .FormItem_inp {
+    flex: 1;
+  }
+
+  .imgInfo {
+    max-width: 300px;
+  }
+
+  .datalist {
+    display: flex;
+  }
+
+  .datalist p {
+    flex: 1;
+    margin-bottom: 8px;
+  }
+
+  .datalist p img {
+    padding: 0 10px;
+    width: 100%;
+  }
+</style>
+

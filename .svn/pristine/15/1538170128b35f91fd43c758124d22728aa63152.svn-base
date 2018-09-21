@@ -1,0 +1,480 @@
+<template>
+  <div class="HotProductConfig">
+
+    <Form :label-width="80" style="padding-top:20px;">
+      <div class="FormItem">
+        <FormItem label="产品名称" class="FormItem_inp">
+          <Input v-model="Inquire.productName" placeholder="请输入产品名称、标题"></Input>
+        </FormItem>
+        <FormItem label="产品编码" class="FormItem_inp">
+          <Input v-model="Inquire.productCode" placeholder="请输入产品编码"></Input>
+        </FormItem>
+        <FormItem label="商家名称" class="FormItem_inp">
+          <Input v-model="Inquire.enterpriseName" placeholder="请输入商家名称"></Input>
+        </FormItem>
+      </div>
+      <div class="FormItem">
+        <FormItem label="产品状态" class="FormItem_inp">
+          <Select v-model="Inquire.status" clearable>
+            <Option v-for="item in statusList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="是否真实" class="FormItem_inp">
+          <Select v-model="Inquire.isReally" clearable>
+            <Option v-for="item in reallyList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="API类型" class="FormItem_inp">
+          <Select v-model="Inquire.apiConfig" clearable>
+            <Option v-for="item in apiList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+      </div>
+    </Form>
+    <div style="text-align:center;margin-bottom:10px;">
+      <Button type="success" @click="getList">搜索</Button>
+    </div>
+
+    <Table style="margin-bottom:8px;" border :loading="loading" :columns="TableTop" :data="tableData"
+           ref="selection"></Table>
+    <Page width="100%" @on-change="changPage" :total="total" show-elevator style="text-align:right"></Page>
+
+    <!--热门目的地-->
+    <Modal
+      :closable="false"
+      :mask-closable="false"
+      v-model="editDesShow" title="编辑热门目的地">
+      <div style="border-bottom: 1px solid #e9e9e9;padding-bottom:6px;margin-bottom:6px;">
+        <Checkbox
+          :indeterminate="indeterminate"
+          :value="checkAll"
+          @click.prevent.native="handleCheckAll">全选
+        </Checkbox>
+      </div>
+      <CheckboxGroup v-model="checkAllGroup" @on-change="checkAllGroupChange">
+        <Checkbox v-for="item in HotDesList" :label="item.subjectId" style="margin-right: 30px;">{{item.subjectName}}
+        </Checkbox>
+      </CheckboxGroup>
+      <div slot="footer">
+        <Button type="text" size="large" @click="editCancel()">取消</Button>
+        <Button type="primary" size="large" :loading="editLoading" @click="editDes()">确认</Button>
+      </div>
+    </Modal>
+
+    <!--热门专题-->
+    <Modal
+      :closable="false"
+      :mask-closable="false"
+      v-model="editTopicShow" title="编辑热门专题">
+      <div style="border-bottom: 1px solid #e9e9e9;padding-bottom:6px;margin-bottom:6px;">
+        <Checkbox
+          :indeterminate="indeterminate"
+          :value="checkAll"
+          @click.prevent.native="handleCheckAll">全选
+        </Checkbox>
+      </div>
+      <CheckboxGroup v-model="checkAllGroup" @on-change="checkAllGroupChange">
+        <Checkbox v-for="item in HotDesList" :label="item.subjectId" style="margin-right: 30px;">{{item.subjectName}}
+        </Checkbox>
+      </CheckboxGroup>
+      <div slot="footer">
+        <Button type="text" size="large" @click="editCancel()">取消</Button>
+        <Button type="primary" size="large" :loading="editLoading" @click="editTopic()">确认</Button>
+      </div>
+    </Modal>
+  </div>
+</template>
+
+<script>
+  export default {
+    name: "HotDesConfig",
+    data() {
+      return {
+        loading: true,
+        editDesShow: false,
+        editTopicShow: false,
+        editLoading: false,
+
+        indeterminate: true,
+        checkAll: false,
+        HotDesList: [],
+        HotDesIdList:[],
+        checkAllGroup: [],
+        /*目的地*/
+        editDesList: {
+          productId: null,
+          subjectType: 1,
+          subjectIds: ''
+        },
+        /*专题*/
+        editTopicList: {
+          productId: null,
+          subjectType: 2,
+          subjectIds: ''
+        },
+
+        Inquire: {
+          pageNum: 1,
+          hotType: 1
+        },
+        statusList: [
+          {label: "上架", value: "1"},
+          {label: "下架", value: "0"}
+        ],
+        reallyList: [
+          {label: "真实", value: "1"},
+          {label: "虚拟", value: "0"}
+        ],
+        apiList: [
+          {label: "同游平台", value: "TONGYOU"},
+          {label: "智游宝", value: "ZYB"}
+        ],
+        total: 0,
+        tableData: [],
+        TableTop: [
+          {
+            title: "产品名称",
+            key: "productName",
+            align: "center",
+            width: 140,
+            fixed: "left"
+          },
+          {
+            title: "产品编码",
+            key: "productCode",
+            align: "center"
+          },
+          {
+            title: "产品状态",
+            key: "status",
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              let icon = "";
+              let color = "";
+              if (params.row.status === 0) {
+                text = "下架";
+                icon = "android-arrow-dropdown-circle";
+                color = "red"
+              } else {
+                text = "上架";
+                icon = "android-arrow-dropup-circle";
+                color = "green"
+              }
+              return h("div", [
+                h("Icon", {
+                  props: {
+                    type: icon,
+                    color: color
+                  }
+                }),
+                h("strong", {
+                  style: {
+                    color: color
+                  }
+                }, text)
+              ]);
+            }
+          },
+          {
+            title: "是否真实",
+            key: "isReally",
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              if (params.row.isReally === 0) {
+                text = "虚拟";
+              } else {
+                text = "真实";
+              }
+              return h("div", [
+                h("strong", text)
+              ]);
+            }
+          },
+          {
+            title: "API类型",
+            key: "apiConfig",
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              let color = "";
+              if (params.row.apiConfig === "ZYB") {
+                text = "智游宝";
+                color = "red"
+              } else {
+                text = "同游平台";
+                color = "green"
+              }
+              return h("div", [
+                h("strong", {
+                  style: {
+                    color: color
+                  }
+                }, text)
+              ]);
+            }
+          },
+          {
+            title: "是否实名制",
+            key: "isRealName",
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              let color = "";
+              if (params.row.isRealName === 0) {
+                text = "否";
+                color = "green";
+              } else {
+                text = "是";
+                color = "red";
+              }
+              return h("div", [
+                h("Icon", {
+                  props: {
+                    type: "person",
+                    color: color
+                  }
+                }),
+                h("strong", text)
+              ]);
+            }
+          },
+          {
+            title: "商家名称",
+            key: "enterpriseName",
+            align: "center"
+          },
+          {
+            title: '设置热门目的地',
+            key: 'hotType',
+            width: 150,
+            align: 'center',
+            render: (h, params) => {
+              return h('div', [
+                h('Button', {
+                  props: {
+                    type: 'primary',
+                    size: 'small',
+                    shape: 'circle',
+                    icon: 'edit'
+                  },
+                  style: {
+                    marginRight: '5px'
+                  },
+                  on: {
+                    click: () => {
+                      this.editDesModelShow(params.row)
+                    }
+                  }
+                })
+              ])
+            }
+          },
+          {
+            title: '设置热门专题',
+            key: 'hotType',
+            width: 150,
+            align: 'center',
+            render: (h, params) => {
+              return h('div', [
+                h('Button', {
+                  props: {
+                    type: 'primary',
+                    size: 'small',
+                    shape: 'circle',
+                    icon: 'edit'
+                  },
+                  style: {
+                    marginRight: '5px'
+                  },
+                  on: {
+                    click: () => {
+                      this.editTopicModelShow(params.row)
+                    }
+                  }
+                })
+              ])
+            }
+          }
+
+        ]
+      };
+    },
+    methods: {
+      changPage(pageNum) {
+        this.Inquire.pageNum = pageNum;
+        this.getList();
+      },
+      /**
+       * 编辑model
+       * @param e
+       */
+      editDesModelShow(e) {
+        // console.log(e)
+        this.editDesList.productId = e.productId;
+        this.axios.get(`${this.AjaxUrl}/ty_manage/subject/getCheckList`, {
+          params: this.editDesList
+        }).then(res => {
+          console.log(res);
+          this.HotDesList = res.data;
+          res.data.map(x => {
+            this.HotDesIdList.push(x.subjectId);
+            if(x.isCheck===1){
+              this.checkAllGroup.push(x.subjectId);
+            }
+          });
+        }).catch(err => {
+          console.log(err);
+        });
+
+        this.editDesShow = true;
+      },
+      /*提交目的地编辑*/
+      editDes(){
+
+        this.checkAllGroup.map(x=>{
+          this.editDesList.subjectIds+=x+',';
+        });
+
+        this.axios.post(`${this.AjaxUrl}/ty_manage/product/subject/check`,
+          this.qs.stringify(this.editDesList)
+        ).then(res => {
+          console.log(res);
+          if (res.errorCode === 200) {
+            this.$Message.info("编辑成功");
+            this.getList();
+            this.editDesShow = false;
+            /*清空*/
+            this.editDesList.subjectIds='';
+            this.HotDesList=[];
+            this.HotDesIdList=[];
+            this.checkAllGroup=[];
+          }
+        }).catch(err => {
+          this.$Message.error("编辑失败");
+        });
+
+      },
+      editTopicModelShow(e) {
+
+        this.editTopicList.productId = e.productId;
+        this.axios.get(`${this.AjaxUrl}/ty_manage/subject/getCheckList`, {
+          params: this.editTopicList
+        }).then(res => {
+          console.log(res);
+          this.HotDesList = res.data;
+          res.data.map(x => {
+            this.HotDesIdList.push(x.subjectId);
+            if(x.isCheck===1){
+              this.checkAllGroup.push(x.subjectId);
+            }
+          });
+        }).catch(err => {
+          console.log(err);
+        });
+        this.editTopicShow = true;
+      },
+      /*提交专题的编辑*/
+      editTopic(){
+
+        this.checkAllGroup.map(x=>{
+          this.editTopicList.subjectIds+=x+',';
+        });
+
+        console.log(this.editTopicList.subjectIds);
+        this.axios.post(`${this.AjaxUrl}/ty_manage/product/subject/check`,
+          this.qs.stringify(this.editTopicList)
+        ).then(res => {
+          console.log(res);
+          if (res.errorCode === 200) {
+            this.$Message.info("编辑成功");
+            this.getList();
+            this.editTopicShow = false;
+            /*清空*/
+            this.editTopicList.subjectIds='';
+            this.HotDesList=[];
+            this.HotDesIdList=[];
+            this.checkAllGroup=[];
+          }
+        }).catch(err => {
+          this.$Message.error("编辑失败");
+        });
+
+      },
+      /**
+       * 取消编辑
+       */
+      editCancel() {
+        this.editDesShow = false;
+        this.editTopicShow = false;
+        /*清空*/
+        this.editDesList.subjectIds='';
+        this.HotDesList=[];
+        this.HotDesIdList=[];
+        this.checkAllGroup=[];
+      },
+      handleCheckAll() {
+        if (this.indeterminate) {
+          this.checkAll = false;
+        } else {
+          this.checkAll = !this.checkAll;
+        }
+        this.indeterminate = false;
+
+        if (this.checkAll) {
+          this.checkAllGroup = this.HotDesIdList;
+        } else {
+          this.checkAllGroup = [];
+        }
+      },
+      checkAllGroupChange(data) {
+        if (data.length === 3) {
+          this.indeterminate = false;
+          this.checkAll = true;
+        } else if (data.length > 0) {
+          this.indeterminate = true;
+          this.checkAll = false;
+        } else {
+          this.indeterminate = false;
+          this.checkAll = false;
+        }
+      },
+      /**
+       * 编辑
+       */
+      getList() {
+        this.loading = true;
+        this.axios.post(`${this.AjaxUrl}/ty_manage/index/push/getList`,
+          this.qs.stringify(this.Inquire)
+        ).then(res => {
+          this.tableData = res.data.list;
+          this.total = res.data.total;
+          this.loading = false;
+        }).catch(err => {
+          console.log(err);
+          this.loading = false;
+        });
+      }
+    },
+    mounted() {
+      this.getList();
+    }
+  }
+</script>
+
+<style scoped>
+  .HotProductConfig {
+    background: #fff;
+    padding: 0 20px;
+  }
+
+  .FormItem {
+    display: flex;
+  }
+
+  .FormItem_inp {
+    width: 300px;
+    flex: 1;
+  }
+</style>

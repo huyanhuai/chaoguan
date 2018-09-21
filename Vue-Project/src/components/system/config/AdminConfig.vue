@@ -1,0 +1,535 @@
+<template>
+  <div>
+      <div style="padding:0 20px;">
+      <Row>
+        <Col span="8">
+              <label for="">用户名称&nbsp;&nbsp; </label>
+              <Input v-model="formItem.userName" placeholder="请输入用户名称" style="width: 300px"></Input>
+        </Col>
+        <Col span="8">
+              <label for="">手机号&nbsp;&nbsp; </label>
+              <Input v-model="formItem.mobile" placeholder="请输入手机号" style="width: 300px"></Input>
+        </Col>
+        <!-- <Col span="8">
+          <label for="">用户类型&nbsp;&nbsp; </label>
+            <Select v-model="formItem.userType" style="width:300px">
+                <Option value="ADMIN">超级管理</Option>
+                <Option value="NORMAL">非超管用户</Option>
+            </Select>   
+        </Col> -->
+        </Row>
+
+        <p  style="textAlign:center;margin-top:10px">
+            <Button type="success" @click="grabble">搜&nbsp;&nbsp;&nbsp;&nbsp;索</Button>
+        </p> 
+        <div  style="margin-top:10px" >
+          <Button type="success" @click="NewlyIncreasedFun">新&nbsp;&nbsp;&nbsp;&nbsp;增</Button>
+        </div>
+         <i-table    border  :content="self" :loading="loading"   :columns="TabTop" :data="TabBody" ></i-table> 
+         <div style="textAlign:right;margin-top:10px">
+             <Page   :total.sync="total"    :current.sync="pageNum"  :pageSize="formItem.pageSize"     show-elevator></Page>
+         </div>
+      </div>
+   
+      <Modal
+        v-model="modal4"
+        title="新增"
+        @on-ok="ok">
+        <p  style="text-align: center; margin-bottom:8px;">
+          <label style="margin-right:8px;width: 50px;display: inline-block;text-align:right">用户名称</label>
+          <Input v-model="newlyIncreased.userName"  type="text" placeholder="请重新输入用户名称" style="width: 300px"></Input>
+        </p>
+        <p  style="text-align: center; margin-bottom:8px;">
+            <label style="margin-right:8px;width: 50px;display: inline-block;text-align:right">用户类型</label>
+          <Select v-model="newlyIncreased.userType" style="width:300px">
+            <Option value="ADMIN">超级管理</Option>
+            <Option value="NORMAL">非超管用户</Option>
+          </Select>
+        </p>
+        <p  style="text-align: center; margin-bottom:8px;">
+          <label style="margin-right:8px;width: 50px;display: inline-block;text-align:right">手机号</label>
+          <Input v-model="newlyIncreased.mobile"  type="text" placeholder="请重新输入手机号" style="width: 300px"></Input>
+        </p>
+          <p  style="text-align: center; margin-bottom:8px;">
+          <label style="margin-right:8px;width: 50px;display: inline-block;text-align:right">密码</label>
+          <Input  v-model="newlyIncreased.password" type="password"  placeholder="请输入密码" style="width: 300px"></Input>
+        </p>
+        <p  style="text-align: center; margin-bottom:8px;">
+          <label style="margin-right:8px;width: 50px;display: inline-block;text-align:right">确认密码</label>
+          <Input v-model="newlyIncreased.twopassword"  type="password" placeholder="请重新输入密码" style="width: 300px"></Input>
+        </p>    
+        <div  style="text-align: center;" v-if="newlyIncreased.userType == 'NORMAL'">
+            <label style="margin-right:8px;width: 50px;display: inline-block;text-align:right">角色</label>
+            <div style="width:300px;display:inline-block" >         
+            <RadioGroup  v-model="newlyIncreased.manageRoleId">
+                  <Radio  :label="item.manageRoleId" style="display:block;text-align:left;" :key="key" v-for="(item, key) in toEditlist">
+                      <span>{{item.roleName}}</span>
+                  </Radio >
+              </RadioGroup>
+            </div>
+        </div>   
+        <div slot="footer">
+          <!-- <Button type="text" size="large" @click="addCancel('addForm')">取消</Button> -->
+          <Button type="primary" size="large" :loading="addLoading" @click="ok">确认</Button>
+        </div> 
+    </Modal>
+
+
+      <Modal
+        v-model="modal1"
+        title="修改密码"
+        @on-ok="ok">
+          <p  style="text-align: center; margin-bottom:8px;">
+          <label style="margin-right:8px;width: 50px;display: inline-block;text-align:right">密码</label>
+          <Input  v-model="operation.password" type="password"  placeholder="请输入密码" style="width: 300px"></Input>
+        </p>
+        <p  style="text-align: center;">
+          <label style="margin-right:8px;width: 50px;display: inline-block;text-align:right">确认密码</label>
+          <Input v-model="operation.twopassword"  type="password" placeholder="请重新输入密码" style="width: 300px"></Input>
+        </p>
+    </Modal>
+
+        <Modal
+        v-model="modal2"
+        title="确认删除？"
+        @on-ok="ok">
+        <p>确认删除该用户吗？</p>
+    </Modal>
+
+      <Modal
+        v-model="modal3"
+        title="编辑"
+        @on-ok="ok">
+          <p  style="text-align: center; margin-bottom:8px;">
+          <label style="margin-right:8px;width: 50px;display: inline-block;text-align:right">用户名称</label>
+          <Input  v-model="operation.userName"   placeholder="请输入用户名称" style="width: 300px"></Input>
+        </p>
+        <p  style="text-align: center; margin-bottom:8px;">
+            <label style="margin-right:8px;width: 50px;display: inline-block;text-align:right">用户类型</label>
+          <Select v-model="operation.userType" style="width:300px">
+            <Option value="ADMIN">超级管理</Option>
+            <Option value="NORMAL">非超管用户</Option>
+          </Select>
+        </p> 
+        <!-- <p  style="text-align: center;margin-top: 10px;">
+          <label style="margin-right:8px;width: 50px;display: inline-block;text-align:right">状态</label>
+          <Select v-model="operation.status" style="width:300px">
+              <Option v-for="item in statelist"  :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </p> -->
+        <div  style="text-align: center;margin-top: 10px;" v-if="operation.userType == 'NORMAL'">
+            <label style="margin-right:8px;width: 50px;display: inline-block;text-align:right">角色</label>
+            <div style="width:300px;display:inline-block" >         
+              <RadioGroup  v-model="operation.manageRoleId">
+                  <Radio  :label="item.manageRoleId" style="display:block;text-align:left" :key="key" v-for="(item, key) in toEditlist">
+                      <span>{{item.roleName}}</span>
+                  </Radio >
+              </RadioGroup>
+            </div>
+        </div>
+        <div slot="footer">
+          <Button type="primary" size="large" :loading="editLoading" @click="ok">确认</Button>
+        </div>
+    </Modal>   
+  </div>
+</template>
+<script>
+import {formatDate} from "../../../js/public";
+export default {
+  data() {
+    return {
+      loading: true,
+      addLoading: false,
+      editLoading: false,
+      auth_id:"",
+      newlyIncreased: {
+        password: "",
+        roleIds: "",
+        userId: "",
+        userName: "",
+        userType: "",
+        userStat: "NORMAL",
+        twopassword: "",
+        manageRoleId: "",
+        mobile: ""
+      },
+      toEditlist: [],
+      operation: {
+        type: "",
+        userName: "",
+        userType: "",
+        mobile: "",
+        status: "",
+        manageRoleId: "",
+        manageUserId	: "",
+        password: "",
+        twopassword: ""
+      },
+      modal1: false,
+      modal2: false,
+      modal3: false,
+      modal4: false,
+      self: this,
+      TabBody: [],
+      total: 0,
+      statelist: [{ value: 0, label: "正常" }, { value: 1, label: "无效" }],
+      TabTop: [
+        {
+          title: "用户名称",
+          key: "userName",
+          width: 140,
+          align: "center"
+        },
+        {
+          title: "手机号",
+          key: "mobile",
+          align: "center"
+        },
+        //roleName
+        {
+          title: "角色",
+          key: "roleName",
+          align: "center"
+        },
+        {
+          title: "添加时间",
+          key: "createTime",
+          align: "center",
+          render: (h, params) => {
+                return h("div", [
+                    h("strong", formatDate(params.row.createTime, "yyyy-MM-dd HH:mm"))
+                ]);
+            }
+        },
+        {
+          title: "用户类型",
+          key: "userType",
+          width: 100,
+          align: "center",
+          render(h, params) {
+            let text = "";
+            if(params.row.userType == "ADMIN"){
+                text = "超级管理"
+            }else if(params.row.userType == "NORMAL"){
+                text = "非超管用户"
+            }
+            return h("div", [
+                h("strong", text)
+            ]);
+          }
+        },
+        {
+          title: "操作",
+          key: "status",
+          align: "center",
+          render: (h, params) => {
+            return h("div", [
+              h(
+                "Button",
+                {
+                  props: {
+                    type: "primary",
+                    size: "small"
+                  },
+                  style: {
+                    marginRight: "5px"
+                  },
+                  on: {
+                    click: () => {
+                      this.operation.type = 1;
+                      this.modal3 = true;
+
+                      this.operation.manageUserId = this.TabBody[
+                        params.index
+                      ].manageUserId;
+
+                      this.operation.userName = this.TabBody[
+                        params.index
+                      ].userName;
+
+                      this.operation.mobile = this.TabBody[params.index].mobile;
+                      this.operation.userType = this.TabBody[params.index].userType;
+
+                      this.operation.status = this.TabBody[params.index].status;
+                      this.operation.manageRoleId = this.TabBody[
+                        params.index
+                      ].manageRoleId;
+                    }
+                  }
+                },
+                "编辑"
+              ),
+              h(
+                "Button",
+                {
+                  props: {
+                    type: "primary",
+                    size: "small"
+                  },
+                  style: {
+                    marginRight: "5px"
+                  },
+                  on: {
+                    click: () => {
+                      this.modal2 = true;
+                      this.operation.type = 2;
+                      this.operation.manageUserId = this.TabBody[
+                        params.index
+                      ].manageUserId;
+                      console.log(this.operation.manageUserId);
+                    }
+                  }
+                },
+                "删除"
+              ),
+            //   h(
+            //     "Button",
+            //     {
+            //       props: {
+            //         type: "primary",
+            //         size: "small"
+            //       },
+            //       style: {
+            //         marginRight: "5px"
+            //       },
+            //       on: {
+            //         click: () => {
+            //           this.operation.password = "";
+            //           this.operation.twopassword = "";
+            //           this.modal1 = true;
+            //           this.operation.type = 3;
+            //           this.operation.manageUserId = this.TabBody[
+            //             params.index
+            //           ].manageUserId;
+            //           //console.log(params.index);
+            //         }
+            //       }
+            //     },
+            //     "修改密码"
+            //   )
+            ]);
+          }
+        }
+      ],
+      Title: "系统管理",
+      formItem: {
+        userName: null,
+        mobile: null,
+        userType: null,
+        pageSize: 10,
+        pageNum: 1
+      },
+      pageNum: 1,
+      cityList: []
+    };
+  },
+  methods: {
+      //新增
+    NewlyIncreasedFun() {
+      this.modal4 = true;
+      this.newlyIncreased.userName = "";
+      this.newlyIncreased.userType = "";
+      this.newlyIncreased.mobile = "";
+      this.newlyIncreased.password = "";
+      this.newlyIncreased.twopassword ="";
+      this.operation.type = 4;
+    },
+    //提交
+    ok() {
+      //编辑
+      if (this.operation.type == 1) {
+        let url = `${this.AjaxUrl}/ty_manage/manage/user/update`;
+        let data = {};
+
+        let {
+          userName,
+          userType,
+          manageRoleId,
+          manageUserId,
+          mobile,
+          status
+        } = this.operation;
+
+        data.userName = userName;
+        data.userType = userType;
+        if(userType == "NORMAL"){
+            data.manageRoleId = manageRoleId;
+        }
+        // data.mobile = mobile;
+        // data.status = status;
+        // data.auth_id=this.auth_id;
+        this.editLoading = true;
+        this.axios
+          .post(url, this.qs.stringify(data))
+          .then(res => {
+            if (res.errorCode == 200) {
+              this.$Message.success(res.message);
+              // this.editLoading = false;
+              this.modal3 = false;
+              this.loading = true;
+              this.first();
+            } else {
+              this.editLoading = false;
+              this.$Message.error(res.message);
+            }
+          })
+          .catch(err => {});
+      } else if (this.operation.type == 2) {
+        let url = `${this.AjaxUrl}/ty_manage/manage/user/delete`;
+        let data = {};
+        data.manageUserId = this.operation.manageUserId;
+        // data.auth_id=this.auth_id;
+        this.axios
+          .post(url, this.qs.stringify(data))
+          .then(res => {
+            if (res.errorCode == 200) {
+              this.$Message.success(res.message);
+              this.first();
+            } else {
+              this.$Message.error(res.message);
+            }
+          })
+          .catch(err => {});
+      } else if (this.operation.type == 3) {
+        if (this.operation.password == this.operation.twopassword) {
+          let url = `${
+            this.AjaxUrl
+          }/ty_business/business/user/updateAccountPassword`;
+          let data = {};
+        //   var md5 = require("md5");
+        //   data.password = md5(this.operation.password);
+          let crypto = require("crypto");
+
+          var md5 = crypto.createHash("md5");
+
+          data.password = md5.update(this.operation.password).digest("hex");
+          data.manageUserId = this.operation.manageUserId;
+        //   data.auth_id=this.auth_id;
+          this.axios
+            .post(url, this.qs.stringify(data))
+            .then(res => {
+              if (res.errorCode == 200) {
+                this.$Message.success(res.message);
+              } else {
+                this.$Message.error(res.message);
+              }
+            })
+            .catch(err => {});
+        } else {
+          this.$Message.error("两次密码输入不一致!");
+          this.operation.password = "";
+          this.operation.twopassword = "";
+          return false;
+        }
+      } else {
+        //新增
+        // var regExp = /^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{6,21}$/;
+        // if (regExp.test(this.newlyIncreased.password)) {
+          if(this.newlyIncreased.userName == "" && this.newlyIncreased.mobile == "" && this.newlyIncreased.userType ==""
+            && this.newlyIncreased.password == ""){
+                this.$Message.error("请填写所有内容！");
+                return false;
+            }
+          if (this.newlyIncreased.password == this.newlyIncreased.twopassword) {
+            let url = `${this.AjaxUrl}/ty_manage/manage/user/insert`;
+            let data = {};
+            // let md5 = require("md5");
+
+            // data.password = md5(this.newlyIncreased.password);
+            let crypto = require("crypto");
+
+            var md5 = crypto.createHash("md5");
+
+            data.password = md5.update(this.newlyIncreased.password).digest("hex");
+            data.userType = this.newlyIncreased.userType;
+            if(this.newlyIncreased.userType == "NORMAL"){
+               data.manageRoleId = this.newlyIncreased.manageRoleId;
+            }
+            //data.userId = this.newlyIncreased.userId;
+            data.userName = this.newlyIncreased.userName;
+            data.mobile = this.newlyIncreased.mobile;
+            // data.auth_id = this.auth_id;
+            this.addLoading = true;
+            this.axios
+              .post(url, this.qs.stringify(data))
+              .then(res => {
+                if (res.errorCode == 200) {
+                  for (var i in this.newlyIncreased) {
+                    if (i == "social") {
+                      this.newlyIncreased[i] = [];
+                    } else {
+                      this.newlyIncreased[i] = "";
+                    }
+                  }
+                  // this.addLoading = false;
+                  this.modal4 = false;
+                  this.$Message.success(res.message);
+                  this.loading = true;
+                  this.first();
+                } else {
+                  this.addLoading = false;
+                  this.$Message.error(res.message);
+                }
+              })
+              .catch(err => {});
+          } else {
+            this.$Message.error("二次密码输入不一致！");
+          }
+        // } else {
+        //   this.$Message.error("密码由6-21字母和数字组成！");
+        // }
+      }
+    },
+    //查询列表
+    first() {
+      let { userName, status, pageNum, mobile } = this.formItem;
+
+      this.axios
+        .get(`${this.AjaxUrl}/ty_manage/manage/user/getList`, {
+          params: {
+            mobile,
+            userName,
+            status,
+            pageNum
+          }
+        })
+        .then(res => {
+          if(res.errorCode == 200){
+            this.TabBody = res.data.list;
+            this.total = res.data.total;
+            this.loading = false;
+          }else{
+            this.$Message.error(res.message);
+          }
+          
+        })
+        .catch(err => {});
+    },
+    //搜索
+    grabble() {
+      this.pageNum = 1;
+      this.first();
+    }
+  },
+  mounted() {
+    this.first();
+    // this.auth_id = this.$route.params.id;
+    let url = `${this.AjaxUrl}/ty_manage/manage/role/getAll`;
+    this.axios
+      .get(url, {
+        params: {}
+      })
+      .then(res => {
+        this.toEditlist = res.data;
+      })
+      .catch(err => {});
+  },
+  watch: {
+    pageNum() {
+      this.formItem.pageNum = this.pageNum;
+      this.first();
+    }
+  },
+};
+</script>
+

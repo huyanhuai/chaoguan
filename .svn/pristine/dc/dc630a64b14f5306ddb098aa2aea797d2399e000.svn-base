@@ -1,0 +1,291 @@
+<template>
+  <div class="ProductList">
+    <Form :label-width="80" style="padding-top:20px;">
+      <div class="FormItem">
+        <FormItem label="产品名称" class="FormItem_inp">
+          <Input v-model="Inquire.productName" placeholder="请输入产品名称、标题"></Input>
+        </FormItem>
+        <FormItem label="产品编码" class="FormItem_inp">
+          <Input v-model="Inquire.productCode" placeholder="请输入产品编码"></Input>
+        </FormItem>
+        <FormItem label="商家名称" class="FormItem_inp">
+          <Input v-model="Inquire.enterpriseName" placeholder="请输入商家名称"></Input>
+        </FormItem>
+      </div>
+      <div class="FormItem">
+        <FormItem label="产品状态" class="FormItem_inp">
+          <Select v-model="Inquire.status" clearable>
+            <Option v-for="item in statusList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="是否真实" class="FormItem_inp">
+          <Select v-model="Inquire.isReally" clearable>
+            <Option v-for="item in reallyList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="API类型" class="FormItem_inp">
+          <Select v-model="Inquire.apiConfig" clearable>
+            <Option v-for="item in apiList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+      </div>
+    </Form>
+    <div style="text-align:center;margin-bottom:10px;">
+      <Button type="success" @click="getList">搜索</Button>
+    </div>
+    <Table style="margin-bottom:8px;" border :loading="loading" :columns="TableTop" :data="tableData"></Table>
+    <Page width="100%" @on-change="chang" :total="total" show-elevator style="text-align:right"></Page>
+    <!--<Modal-->
+      <!--v-model="productInfoShow"-->
+      <!--title="产品详情"-->
+      <!--width="740px">-->
+
+    <!--</Modal>-->
+  </div>
+</template>
+<script>
+  export default {
+    data() {
+      return {
+        loading: true,
+        productInfoShow: false,
+        productInfo: {},
+        Inquire: {
+          pageNum: 1,
+          productName: null,
+          enterpriseName: null,
+          productCode: null,
+          status: null,
+          isReally: null,
+          apiConfig: null
+        },
+        statusList: [
+          {label: "上架", value: "1"},
+          {label: "下架", value: "0"}
+        ],
+        reallyList: [
+          {label: "真实", value: "1"},
+          {label: "虚拟", value: "0"}
+        ],
+        apiList: [
+          {label: "同游平台", value: "TONGYOU"},
+          {label: "智游宝", value: "ZYB"}
+        ],
+        total: 0,
+        tableData: [],
+        TableTop: [
+          {
+            title: "产品名称",
+            key: "productName",
+            align: "center",
+            width: 140,
+            fixed: "left"
+          },
+          {
+            title: "ID",
+            key: "productId",
+            align: "center"
+          },
+          {
+            title: "产品标题",
+            key: "productTitle",
+            align: "center"
+          },
+          {
+            title: "产品编码",
+            key: "productCode",
+            align: "center"
+          },
+          {
+            title: "地址",
+            key: "address",
+            align: "center"
+          },
+          {
+            title: "产品状态",
+            key: "status",
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              let icon = "";
+              let color = "";
+              if (params.row.status === 0) {
+                text = "下架";
+                icon = "android-arrow-dropdown-circle";
+                color = "red"
+              } else {
+                text = "上架";
+                icon = "android-arrow-dropup-circle";
+                color = "green"
+              }
+              return h("div", [
+                h("Icon", {
+                  props: {
+                    type: icon,
+                    color: color
+                  }
+                }),
+                h("strong", {
+                  style: {
+                    color: color
+                  }
+                }, text)
+              ]);
+            }
+          },
+          {
+            title: "是否真实",
+            key: "isReally",
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              if (params.row.isReally === 0) {
+                text = "虚拟";
+              } else {
+                text = "真实";
+              }
+              return h("div", [
+                h("strong", text)
+              ]);
+            }
+          },
+          {
+            title: "API类型",
+            key: "apiConfig",
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              let color = "";
+              if (params.row.apiConfig === "ZYB") {
+                text = "智游宝";
+                color = "red"
+              } else {
+                text = "同游平台";
+                color = "green"
+              }
+              return h("div", [
+                h("strong", {
+                  style: {
+                    color: color
+                  }
+                }, text)
+              ]);
+            }
+          },
+          {
+            title: "是否实名制",
+            key: "isRealName",
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              let color = "";
+              if (params.row.isRealName === 0) {
+                text = "否";
+                color = "green";
+              } else {
+                text = "是";
+                color = "red";
+              }
+              return h("div", [
+                h("Icon", {
+                  props: {
+                    type: "person",
+                    color: color
+                  }
+                }),
+                h("strong", text)
+              ]);
+            }
+          },
+          {
+            title: "商家名称",
+            key: "enterpriseName",
+            align: "center",
+            fixed: "right"
+          },
+          {
+            title: "操作",
+            key: "操作",
+            align: "center",
+            width: 140,
+            fixed: "right",
+            render: (h, params) => {
+              return h("div", [
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: "primary",
+                      size: "small"
+                    },
+                    style: {
+                      marginRight: "5px"
+                    },
+                    on: {
+                      click: () => {
+                        this.getProductInfo(params.row.productId)
+                      }
+                    }
+                  },
+                  "产品详情"
+                )
+              ]);
+            }
+          }
+        ]
+      };
+    },
+    methods: {
+      chang(pageNum) {
+        this.Inquire.pageNum = pageNum;
+        this.getList();
+      },
+      getList() {
+        this.loading = true;
+        this.axios.get(`${this.AjaxUrl}/ty_manage/product/getList`, {
+          params: this.Inquire
+        }).then(res => {
+          this.tableData = res.data.list;
+          this.total = res.data.total;
+          this.loading = false;
+        }).catch(err => {
+          console.log(err);
+          this.loading = false;
+        });
+      },
+      getProductInfo(productId) {
+        this.axios.get(`${this.AjaxUrl}/ty_manage/product/getDetail`, {
+          params: {
+            productId: productId
+          }
+        }).then(res => {
+          console.log(res);
+          this.productInfo = res.data;
+        }).catch(err => {
+          console.log(err);
+        });
+        this.productInfoShow = true;
+      }
+    },
+    mounted() {
+      this.getList();
+    }
+  };
+</script>
+
+<style scoped>
+  .ProductList {
+    background: #fff;
+    padding: 0 20px;
+  }
+
+  .FormItem {
+    display: flex;
+  }
+
+  .FormItem_inp {
+    width: 300px;
+    flex: 1;
+  }
+</style>
+

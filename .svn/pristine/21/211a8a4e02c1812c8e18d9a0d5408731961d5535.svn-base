@@ -1,0 +1,414 @@
+<template>
+    <div>
+       <Table :show-header="false" :columns="TableTop" :data="row" :row-class-name="rowClassName"></Table>
+
+       <Modal v-model="editShow" title="编辑">
+      <Form :model="editData" ref="editForm" :rules="authRule" :label-width="80">
+        <FormItem label="icon图片" prop="iconUrl">
+          <Upload :action="this.AjaxUrl + '/ty_manage/home/upload'"
+                  :before-upload="editUploadBefore"
+                  style="width: 100px; height: 100px"
+                  type="drag">
+            <div style="padding: 20px 0; width: 100px; height: 100px" v-if="this.PictureImg == null">
+              <Icon type="ios-cloud-upload" size="50" style="color: #3399ff"></Icon>
+              <p>点击上传图片</p>
+            </div>
+            <img v-if="this.PictureImg != null" :src="Imgjpg()" :alt="editData.title"
+                 style="width: 100px; height: 100px">
+          </Upload>
+        </FormItem>
+        <FormItem label="权限名称" prop="authName">
+          <Input v-model="editData.authName" placeholder="请输入类型名称"></Input>
+        </FormItem>
+        <FormItem label="父权限">
+          <Select v-model="editData.authParentId" style="width:200px">
+            <Option v-for="item in parentAuthList" :value="item.systemAuthId" :key="item.systemAuthId">{{ item.authName }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="位置">
+          <Select v-model="editData.site" style="width:200px">
+            <Option value="TOP">TOP</Option>
+            <Option value="CENTRE">CENTRE</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="APP显示">
+          <Select v-model="editData.isApp" style="width:200px">
+            <Option value="0">否</Option>
+            <Option value="1">是</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="pc权限控制">
+          <Input type="text" v-model="editData.pcAuthUrl" placeholder="请输入类型名称"></Input>
+        </FormItem>
+        <FormItem label="ios权限控制">
+          <Input type="text" v-model="editData.iosAuthUrl" placeholder="请输入类型名称"></Input>
+        </FormItem>
+        <FormItem label="排序" prop="sn">
+          <InputNumber :max="99" :min="1" v-model="editData.sn"></InputNumber>
+        </FormItem>
+      </Form>
+      <div slot="footer">
+        <Button type="text" size="large" @click="editCancel('addForm')">取消</Button>
+        <Button type="primary" size="large" :loading="editLoading" @click="edit('editForm')">确认</Button>
+      </div>
+    </Modal>
+    
+    <Modal v-model="deleteShow" width="360">
+      <p slot="header" style="color:#f60;text-align:center">
+        <Icon type="information-circled"></Icon>
+        <span>删除确认</span>
+      </p>
+      <div style="text-align:center">
+        <p>确认要删除 {{ deleteFlag.typeName }} 吗?</p>
+      </div>
+      <div slot="footer">
+        <Button type="error" size="large" long :loading="delLoading" @click="del">确认</Button>
+      </div>
+    </Modal>
+    </div>
+</template>
+<script>
+import {formatDate} from "../../../js/public";
+    export default {
+        props: {
+            row: Array
+        },
+        data() {
+            return {
+                business: true,
+                manage: false,
+                queryParam: {
+                pageNum: 1,
+                authName: null
+                },
+                PictureImg: null,
+                authRule: {
+                authName: [
+                    {required: true, message: '权限名称不能为空', trigger: 'blur'}
+                ],
+                sn: [
+                    {required: true, type: 'number', message: '排序不能为空', trigger: 'blur'}
+                ]
+                },
+                total: 0,
+                tableData: [],
+                tableData0: [],
+                addShow: false,
+                addLoading: false,
+                editShow: false,
+                editLoading: false,
+                deleteShow: false,
+                delLoading: false,
+                deleteFlag: {
+                systemAuthId: null,
+                authName: null
+                },
+                editData: {
+                systemAuthId: null,
+                authName: null,
+                authParentId: null,
+                authType: 'NAVBAR',
+                site: null,
+                isApp: null,
+                pcAuthUrl: null,
+                iosAuthUrl: null,
+                systemType: 'BUSINESS',
+                iconUrl: null,
+                sn: 99
+                },
+                addData: {
+                authName: null,
+                authParentId: '0',
+                authType: 'NAVBAR',
+                site: null,
+                isApp: '0',
+                pcAuthUrl: null,
+                iosAuthUrl: null,
+                systemType: 'BUSINESS',
+                iconUrl: null,
+                sn: 99
+                },
+                parentAuthList: [],
+                iconUrl: null,
+                tableData: [],
+                TableTop: [
+                    {
+                    title: "",
+                    width: 50,
+                    align: "center"
+                },
+                {
+                    title: "ID",
+                    key: "systemAuthId",
+                    width: 80,
+                    align: "center"
+                },
+                {
+                    title: "图片",
+                    key: "iconUrl",
+                    width: 90,
+                    align: "center",
+                    render: (h, params) => {
+                    return h('div', [
+                        h("img", {
+                        attrs: {
+                            src: this.imgUrl + params.row.iconUrl + "_small.jpg",
+                        },
+                        style: {
+                            width: '50px',
+                            height: '50px'
+                        }
+                        })
+                    ]);
+                    }
+                },
+                {
+                    title: "权限名称",
+                    key: "authName",
+                    width: 100,
+                    align: "center",
+                },
+                {
+                    title: "父权限",
+                    key: "authParentId",
+                    width: 100,
+                    align: "center"
+                },
+                {
+                    title: "PC权限控制",
+                    key: "pcAuthUrl",
+                    align: "center"
+                },
+                {
+                    title: "APP权限控制",
+                    key: "iosAuthUrl",
+                    align: "center"
+                },
+                {
+                    title: "系统类型",
+                    key: "systemType",
+                    width: 100,
+                    align: "center"
+                },
+                {
+                    title: "位置",
+                    key: "site",
+                    width: 100,
+                    align: "center"
+                },
+                {
+                    title: "APP展示",
+                    key: "isApp",
+                    width: 100,
+                    align: "center",
+                    render: (h, params) => {
+                    let text;
+                    if (params.row.isApp === 1) {
+                        text = '是'
+                    } else {
+                        text = '否'
+                    }
+                    return h("div", [
+                        h("strong", text)
+                    ]);
+                    }
+                },
+                {
+                    title: "排序",
+                    key: "sn",
+                    width: 80,
+                    align: "center"
+                },
+                {
+                    title: "创建时间",
+                    key: "createTime",
+                    width: 160,
+                    align: "center",
+                    render: (h, params) => {
+                    return h("div", [
+                        h("strong", formatDate(params.row.createTime, "yyyy-MM-dd HH:mm"))
+                    ]);
+                    }
+                },
+                {
+                    title: "操作",
+                    key: "userName",
+                    align: "center",
+                    width: 140,
+                    render: (h, params) => {
+                    return h('div', [
+                        h('Button', {
+                        props: {
+                            type: 'primary',
+                            size: 'small',
+                            shape: 'circle',
+                            icon: 'edit'
+                        },
+                        style: {
+                            marginRight: '5px'
+                        },
+                        on: {
+                            click: () => {
+                            this.editModelShow(params.row)
+                            }
+                        }
+                        }),
+                        h('Button', {
+                        props: {
+                            type: 'error',
+                            size: 'small',
+                            shape: 'circle',
+                            icon: 'trash-a'
+                        },
+                        on: {
+                            click: () => {
+                            this.deleteModelShow(params.row)
+                            }
+                        }
+                        })
+                    ])
+                    }
+                }
+                ]
+            }
+        },
+        methods: {
+            /**
+             * 编辑model
+             * @param e
+             */
+            editModelShow(e) {
+                let systemType = "BUSINESS";
+                this.axios.get(`${this.AjaxUrl}/ty_manage/system/auth/getParentAuthList`, {
+                    params: {systemType}
+                })
+                .then(res => {
+                    if (res.errorCode === 200) {
+                    this.parentAuthList = res.data;
+                    }
+                }).catch(err => {
+                console.log(err);
+                });
+                this.editData.systemAuthId = e.systemAuthId;
+                this.editData.authName = e.authName;
+                this.editData.authParentId = e.authParentId;
+                this.editData.authType = e.authType;
+                this.editData.site = e.site;
+                this.editData.isApp = e.isApp.toString();
+                this.editData.pcAuthUrl = e.pcAuthUrl;
+                this.editData.iosAuthUrl = e.iosAuthUrl;
+                this.editData.systemType = e.systemType;
+                this.editData.iconUrl = e.iconUrl;
+                this.editData.sn = e.sn;
+                this.editShow = true;
+
+            },
+            //提交按钮
+            edit(name) {
+                this.$refs[name].validate((valid) => {
+                if (valid) {
+                    this.axios.post(`${this.AjaxUrl}/ty_manage/system/auth/update`,
+                    this.qs.stringify(this.editData)
+                    ).then(res => {
+                    if (res.errorCode === 200) {
+                        this.$Message.info("编辑成功");
+                        // this.getList();
+                        this.editShow = false;
+                        this.PictureImg = null;
+                    }
+                    }).catch(err => {
+                    this.$Message.error("编辑失败");
+                    });
+                }
+                })
+            },
+            /**
+             * 取消编辑
+             */
+            editCancel() {
+                this.editShow = false;
+            },
+            //删除
+            deleteModelShow(e) {
+                this.deleteFlag.systemAuthId = e.systemAuthId;
+                this.deleteFlag.authName = e.authName;
+                this.deleteShow = true;
+            },
+            del() {
+                this.delLoading = true;
+                console.log(this.deleteFlag.systemAuthId);
+                this.axios.post(`${this.AjaxUrl}/ty_manage/system/auth/delete`,
+                this.qs.stringify({systemAuthId: this.deleteFlag.systemAuthId})
+                ).then(res => {
+                if (res.errorCode === 200) {
+                    this.$Message.info("删除成功");
+                    // this.getList();
+                    this.deleteShow = false;
+                }
+                }).catch(err => {
+                this.$Message.error("删除失败");
+                });
+                this.delLoading = false;
+            },
+            rowClassName (row, index) {
+                    return 'demo-table-error-row';
+            },
+            //上传图片
+            editUploadBefore(file) {
+                let reader = new FileReader();
+                let _this = this;
+                let data = new FormData();
+                data.append("file", file);
+                data.append("path", "systemAuth");
+                this.axios
+                .post(`${this.AjaxUrl}/ty_manage/home/upload`, data)
+                .then(res => {
+                    if (res.errorCode === 200) {
+                    console.log(res.data);
+                    this.editData.iconUrl = res.data;
+                    }
+                }).catch(err => {
+                });
+
+                reader.readAsDataURL(file);
+                reader.onload = function (e) {
+                _this.PictureImg = this.result;
+                };
+                return false;
+            },
+            Imgjpg() {
+                return this.PictureImg === null ? this.imgUrl + this.editData.iconUrl + '.jpg' : this.PictureImg;
+            },
+            // getList() {
+            //     let systemType = "MANAGE";
+            //     this.axios.get(`${this.AjaxUrl}/ty_manage/system/auth/getList`, {
+            //     params: {
+            //         systemType
+            //     }
+            //     }).then(res => {
+            //     if (res.errorCode === 200) {
+            //         for(let k in res.data){
+            //             this.tableData = k.authList;
+            //         }
+            //         console.log(this.tableData);
+            //     } else {
+            //         this.$Message.error(res.message);
+            //     }
+            //     }).catch(err => {
+            //     console.log(err);
+            //     });
+            // }
+        },
+        mounted() {
+            // this.getList();
+        }
+    };
+</script>
+<style>
+ .demo-table-error-row td{
+     background: #F8F8F9 !important;
+ }
+ .ivu-table-expanded-cell{
+  padding: 1px !important;
+}
+</style>

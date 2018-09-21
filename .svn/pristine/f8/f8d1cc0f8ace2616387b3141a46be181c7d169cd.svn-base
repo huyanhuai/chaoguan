@@ -1,0 +1,598 @@
+<template>
+  <div class="BusinessManagement">
+    <!-- 放大图片 -->
+    <big-img v-if="bigImg" @clickit="viewImg" :imgSrc="bigImgSrc"></big-img>
+    <div v-if="!info">
+      <Form :label-width="80" style="padding-top:20px;">
+        <div class="FormItem">
+          <FormItem label="关键字" class="FormItem_inp">
+            <Input v-model="condition.name" clearable placeholder="请输入企业名称，企业简称，用户名"></Input>
+          </FormItem>
+          <FormItem label="信用代码" class="FormItem_inp">
+            <Input v-model="condition.socialCreditiCode" clearable placeholder="请输入统一社会信用代码"></Input>
+          </FormItem>
+          <FormItem label="身份证号" class="FormItem_inp">
+            <Input v-model="condition.identityCard" clearable placeholder="请输入身份证号"></Input>
+          </FormItem>
+        </div>
+        <div class="FormItem">
+          <FormItem label="注册手机号" class="FormItem_inp">
+            <Input v-model="condition.mobile" clearable placeholder="请输入注册手机号"></Input>
+          </FormItem>
+          <FormItem label="申请时间" class="FormItem_inp">
+            <DatePicker type="daterange" placement="bottom-end" style="width:100%" v-model="applicationtime"
+                        placeholder="请输入申请时间"></DatePicker>
+          </FormItem>
+          <FormItem label="注册时间" class="FormItem_inp">
+            <DatePicker type="daterange" placement="bottom-end" style="width:100%" v-model="Registrationtime"
+                        placeholder="请输入注册时间"></DatePicker>
+          </FormItem>
+        </div>
+        <div class="FormItem">
+          <FormItem label="审核状态" class="FormItem_inp">
+            <Select v-model="condition.status" clearable style="width: 300px">
+              <Option v-for="item in statusList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+            </Select>
+          </FormItem>
+        </div>
+      </Form>
+      <div style="text-align:center;margin-bottom:10px;">
+        <Button type="success" @click="Comfort">搜索</Button>
+      </div>
+      <Table border :columns="TableTop" :loading="loading" :data="Tabledata"></Table>
+      <Page width="100%" :total="total" show-elevator style="text-align:right"></Page>
+    </div>
+    <div v-if="info">
+      <div class="datalist">
+        <strong>商家头像：</strong>
+        <p><Avatar :src="businessUserInfo.headImg" style="height: 100px; width: 100px"></Avatar></p>
+        <strong>商家母码：</strong>
+        <p><qr-code :value="businessUserInfo.qrcodeUrl" v-if="qrcodeShow" :options="{ size: 100 }"></qr-code></p>
+      </div>
+      <div class="datalist">
+        <strong>企业名称：</strong>
+        <p>{{businessUserInfo.enterpriseName}}</p>
+        <strong>企业简称：</strong>
+        <p>{{businessUserInfo.shortName}}</p>
+      </div>
+      <div class="datalist">
+        <strong>唯一社会信用代码：</strong>
+        <p>{{businessUserInfo.socialCreditCode}}</p>
+        <strong>注册资本（万元）：</strong>
+        <p>{{businessUserInfo.registeredAssets}}</p>
+      </div>
+      <div class="datalist">
+        <strong>法人姓名：</strong>
+        <p>{{businessUserInfo.legalRepresentativeName}}</p>
+        <strong>法人电话：</strong>
+        <p>{{businessUserInfo.legalRepresentativeMobile}}</p>
+      </div>
+      <div class="datalist">
+        <strong>身份证：</strong>
+        <p>{{businessUserInfo.identityCard}}</p>
+        <strong>银行：</strong>
+        <p>{{businessUserInfo.savings}}</p>
+      </div>
+      <div class="datalist">
+        <strong>支行：</strong>
+        <p>{{businessUserInfo.subbr}}</p>
+        <strong>开户账号：</strong>
+        <p>{{businessUserInfo.bankAccount}}</p>
+      </div>
+      <div class="datalist">
+        <strong>企业注册时间：</strong>
+        <p>{{businessUserInfo.establishmentDate}}</p>
+        <strong>具体地址：</strong>
+        <p>{{businessUserInfo.specificAddress}}</p>
+      </div>
+      <div class="datalist">
+        <strong>营业许可证：</strong>
+        <p>
+          <img class="img" :src="imgUrl + businessUserInfo.travelAgencyLicenceImgurl + '_small.jpg'" @click="clickImg(businessUserInfo.travelAgencyLicenceImgurl)"/>
+        </p>
+        <strong>营业执照图片:</strong>
+        <p>
+          <img class="img" :src="imgUrl + businessUserInfo.businessLicenseImgurl + '_small.jpg'" @click="clickImg(businessUserInfo.businessLicenseImgurl)"/>
+        </p>
+      </div>
+      <div class="datalist">
+        <strong>身份证正面：</strong>
+        <p>
+          <img class="img" :src="imgUrl + businessUserInfo.identityCardFrontImgurl + '_small.jpg'" @click="clickImg(businessUserInfo.identityCardFrontImgurl)"/>
+        </p>
+        <strong>身份证反面:</strong>
+        <p>
+          <img class="img" :src="imgUrl + businessUserInfo.identityCardReverseImgurl + '_small.jpg'" @click="clickImg(businessUserInfo.identityCardReverseImgurl)"/>
+        </p>
+      </div>
+      <div class="datalist">
+        <strong>审核状态：
+          <strong v-if="businessUserInfo.status == 'INIT'" style="color: dimgray"><Icon type="help-circled" style="color: dimgray"></Icon>未审核</strong>
+          <strong v-if="businessUserInfo.status == 'SUCCESS'" style="color: green"><Icon type="checkmark-circled" style="color: green"></Icon>审核通过</strong>
+          <strong v-if="businessUserInfo.status == 'FAIL'" style="color: red"><Icon type="close-circled" style="color: red"></Icon>审核不通过</strong>
+        </strong>
+      </div>
+      <div slot="footer">
+        <Button type="success" @click="audit('SUCCESS')" v-if="businessUserInfo.status == 'INIT'">审核通过</Button>
+        <Button type="success" @click="audit('FAIL')" v-if="businessUserInfo.status == 'INIT'">审核不通过</Button>
+        <Button type="info" @click="back">返回</Button>
+      </div>
+    </div>
+    <!--审核通过弹窗-->
+    <Modal
+      :mask-closable="false"
+      v-model="modal1"
+      width="500px"
+      title="审核通过"
+      @on-ok="ok"
+      @on-cancel="cancel">
+      <div>
+        <span>确认通过 {{businessUserInfo.enterpriseName}} 的入驻申请吗?</span>
+      </div>
+    </Modal>
+    <!--审核不通过弹窗-->
+    <Modal
+      :mask-closable="false"
+      v-model="modal2"
+      width="500px"
+      title="审核不通过"
+      @on-ok="ok"
+      @on-cancel="cancel">
+      <div>
+        <strong>原因：</strong><Input v-model="businessUserInfo.checkMessage" type="textarea" :autosize="{minRows: 2,maxRows: 5}"
+               placeholder="审核描述"></Input>
+      </div>
+    </Modal>
+  </div>
+</template>
+<script>
+  import {getDate, add0} from "../../../js/public";
+  import BigImg from '../../module/BigImg.vue';
+  import QRCode from '@xkeshi/vue-qrcode'
+
+
+  export default {
+    data: function () {
+      return {
+        businessUserInfo: {
+          status: "",
+          businessUserId: "",
+          checkMessage: "",
+          travelAgencyLicenceImgurl: "",
+          businessLicenseImgurl: "",
+          identityCardFrontImgurl: "",
+          identityCardReverseImgurl: "",
+          enterpriseName: "",
+          shortName: "",
+          socialCreditCode: "",
+          registeredAssets: "",
+          legalRepresentativeName: "",
+          legalRepresentativeMobile: "",
+          identityCard: "",
+          savings: "",
+          subbr: "",
+          bankAccount: "",
+          establishmentDate: "",
+          specificAddress: "",
+          headImg: "",
+          qrcodeUrl: ""
+        },
+        loading: false,
+        modal1: false,
+        modal2: false,
+        info: false,
+        bigImg: false,
+        bigImgSrc: null,
+        auditStatus: null,
+        qrcodeShow: false,
+        applicationtime: "",
+        Registrationtime: "",
+        statusList: [
+          {label: "初始", value: "INIT"},
+          {label: "审核通过", value: "SUCCESS"},
+          {label: "审核不通过", value: "FAIL"}
+        ],
+        TableTop: [
+          {
+            title: "注册昵称",
+            key: "userName",
+            align: "center",
+            width: 140
+          },
+          {
+            title: "注册手机号",
+            key: "mobile",
+            align: "center",
+            width: 140
+          },
+          {
+            title: "企业名称",
+            key: "enterpriseName",
+            align: "center",
+            width: 140
+          },
+          {
+            title: "企业简称",
+            key: "shortName",
+            width: 140,
+            align: "center"
+          },
+          {
+            title: "唯一社会信用代码",
+            key: "socialCreditCode",
+            width: 240,
+            align: "center"
+          },
+          {
+            title: "注册资本（万元）",
+            key: "registeredAssets",
+            width: 140,
+            align: "center"
+          },
+          {
+            title: "法人姓名",
+            key: "legalRepresentativeName",
+            width: 140,
+            align: "center"
+          },
+          {
+            title: "法人电话",
+            key: "legalRepresentativeMobile",
+            width: 240,
+            align: "center"
+          },
+          {
+            title: "身份证",
+            key: "identityCard",
+            width: 240,
+            align: "center"
+          },
+          {
+            title: "银行",
+            key: "savings",
+            width: 200,
+            align: "center"
+          },
+          {
+            title: "支行",
+            key: "subbr",
+            width: 240,
+            align: "center"
+          },
+          {
+            title: "开户账号",
+            key: "bankAccount",
+            width: 240,
+            align: "center"
+          },
+          {
+            title: "企业注册时间",
+            key: "establishmentDate",
+            width: 240,
+            align: "center",
+            render: (h, params) => {
+              return h("div", [
+                h("strong", getDate(params.row.establishmentDate))
+              ]);
+            }
+          },
+          {
+            title: "具体地址",
+            key: "specificAddress",
+            width: 240,
+            align: "center"
+          },
+          {
+            title: "企业联系人",
+            key: "corporateContactsName",
+            width: 240,
+            align: "center"
+          },
+          {
+            title: "企业联系人电话",
+            key: "corporateContactsMobile",
+            width: 240,
+            align: "center"
+          },
+          {
+            title: "审核备注",
+            key: "checkMessage",
+            width: 240,
+            align: "center"
+          },
+          {
+            title: "审核状态",
+            key: "status",
+            width: 140,
+            align: "center",
+            fixed: "right",
+            render: (h, params) => {
+              let text = "";
+              let icon = "";
+              let color = "";
+              if (params.row.businessUserInfoId != null) {
+                if (params.row.status === "INIT") {
+                  text = "未审核";
+                  icon = "help-circled";
+                } else if (params.row.status === "SUCCESS") {
+                  text = "审核通过";
+                  icon = "checkmark-circled";
+                  color = "green"
+                } else {
+                  text = "审核不通过";
+                  icon = "close-circled";
+                  color = "red"
+                }
+              } else {
+                text = "未申请入驻"
+              }
+              return h("div", [
+                h("Icon", {
+                  props: {
+                    type: icon,
+                    color: color
+                  }
+                }),
+                h("strong", {
+                  style: {
+                    color: color
+                  }
+                }, text)
+              ]);
+            }
+          },
+          {
+            title: "操作",
+            key: "操作",
+            align: "center",
+            width: 140,
+            fixed: "right",
+            render: (h, params) => {
+              return h("div", [
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: "primary",
+                      size: "small"
+                    },
+                    style: {
+                      marginRight: "5px"
+                    },
+                    on: {
+                      click: () => {
+                        this.Review(params.index);
+                      }
+                    }
+                  },
+                  "获取详情"
+                )
+              ]);
+            }
+          }
+        ],
+        Tabledata: [],
+        total: 100,
+        condition: {
+          name: "",
+          socialCreditiCode: "",
+          identityCard: "",
+          status: "",
+          applyTimeStart: "",
+          applyTimeEnd: "",
+          registerTimeStart: "",
+          registerTimeEnd: "",
+          mobile: "",
+          pageNum: 1,
+          pageSize: 10
+        }
+      };
+    },
+    watch: {
+      applicationtime() {
+        if (this.applicationtime[0] != "") {
+          console.log(11);
+          console.log(this.applicationtime);
+          this.condition.applyTimeStart = getDate(this.applicationtime[0]);
+          this.condition.applyTimeEnd = getDate(this.applicationtime[1]);
+        }
+      },
+      Registrationtime() {
+        if (this.Registrationtime[0] != "") {
+          this.condition.registerTimeStart = getDate(this.Registrationtime[0]);
+          this.condition.registerTimeEnd = getDate(this.Registrationtime[1]);
+        }
+      }
+    },
+    methods: {
+      /**
+       * 商家用户信息
+       * @param index
+       * @constructor
+       */
+      Review(index) {
+        this.info = true;
+        let {
+          businessUserId,
+          enterpriseName,
+          shortName,
+          socialCreditCode,
+          registeredAssets,
+          legalRepresentativeName,
+          legalRepresentativeMobile,
+          identityCard,
+          savings,
+          subbr,
+          bankAccount,
+          establishmentDate,
+          specificAddress,
+          travelAgencyLicenceImgurl,
+          businessLicenseImgurl,
+          identityCardFrontImgurl,
+          status,
+          identityCardReverseImgurl,
+          headImg
+        } = this.Tabledata[index];
+        this.businessUserInfo.enterpriseName = enterpriseName;
+        this.businessUserInfo.shortName = shortName;
+        this.businessUserInfo.socialCreditCode = socialCreditCode;
+        this.businessUserInfo.registeredAssets = registeredAssets;
+        this.businessUserInfo.legalRepresentativeName = legalRepresentativeName;
+        this.businessUserInfo.legalRepresentativeMobile = legalRepresentativeMobile;
+        this.businessUserInfo.identityCard = identityCard;
+        this.businessUserInfo.savings = savings;
+        this.businessUserInfo.subbr = subbr;
+        this.businessUserInfo.bankAccount = bankAccount;
+        this.businessUserInfo.establishmentDate = establishmentDate;
+        this.businessUserInfo.specificAddress = specificAddress;
+        this.businessUserInfo.status = status;
+        this.businessUserInfo.travelAgencyLicenceImgurl = travelAgencyLicenceImgurl;
+        this.businessUserInfo.businessLicenseImgurl = businessLicenseImgurl;
+        this.businessUserInfo.identityCardFrontImgurl = identityCardFrontImgurl;
+        this.businessUserInfo.identityCardReverseImgurl = identityCardReverseImgurl;
+        this.businessUserInfo.businessUserId = businessUserId;
+        this.businessUserInfo.headImg = this.imgUrl + headImg + "_small.jpg";
+        if (status === "SUCCESS") {
+          this.axios.get(`${this.AjaxUrl}/ty_manage/system/config/getDetail`, {
+            params: {
+              code: 'MASTER_CODE_URL'
+            }
+          }).then(res => {
+            let url = res.data.configValue;
+            this.businessUserInfo.qrcodeUrl = url + "?businessUserId=" + businessUserId;
+          }).catch(err => {
+            console.log(err);
+          });
+          this.qrcodeShow = true
+        } else {
+          this.qrcodeShow = false
+        }
+      },
+      audit(e) {
+        switch(e) {
+          case 'SUCCESS':
+            this.modal1 = true;
+            break;
+          case 'FAIL':
+            this.modal2 = true;
+            break;
+          default:
+            return;
+        }
+        this.auditStatus = e;
+      },
+      /**
+       * 取消
+       * @returns {boolean}
+       */
+      cancel() {
+        this.modal1 = false;
+        this.modal2 = false;
+      },
+      back() {
+        this.info = false
+      },
+      Comfort() {
+        this.info = false;
+        this.loading = true;
+        let data = this.condition;
+        this.axios
+          .get(`${this.AjaxUrl}/ty_manage/business/user/info/getList`, {
+            params: data
+          })
+          .then(res => {
+            this.Tabledata = res.data.list;
+            this.total = res.data.total;
+            // console.log(res);
+            this.loading = false;
+          })
+          .catch(err => {
+            this.loading = false;
+          });
+      },
+      ok() {
+        if (this.businessUserInfo.status !== "INIT") {
+          this.$Message.error("不能重复审核");
+          return false;
+        }
+        let qs = require("qs");
+        let data = {};
+        let {businessUserId, checkMessage} = this.businessUserInfo;
+        data.businessUserId = businessUserId;
+        data.checkMessage = checkMessage;
+        data.status = this.auditStatus;
+
+        if (this.auditStatus === "FAIL") {
+          if (this.businessUserInfo.checkMessage === "") {
+            this.$Message.error("审核备注不能为空！");
+            return false;
+          }
+        }
+        this.axios.post(
+            `${this.AjaxUrl}/ty_manage/business/user/info/audit`,
+            qs.stringify(data)
+          )
+          .then(res => {
+            if (res.errorCode === 200) {
+              this.$Message.success(res.message);
+              this.modal1 = false;
+              this.Comfort();
+            } else {
+              this.$Message.error(res.message);
+            }
+          })
+          .catch(err => {
+          });
+      },
+      clickImg(e) {
+        this.bigImg = true;
+        // 获取当前图片地址
+        this.bigImgSrc = this.imgUrl + e + ".jpg";
+      },
+      viewImg(){
+        this.bigImg = false;
+      },
+    },
+    mounted() {
+      this.Comfort();
+    },
+    components: {
+      'big-img':BigImg,
+      'qr-code':QRCode
+    },
+  };
+</script>
+
+<style scoped>
+  .BusinessManagement {
+    background: #fff;
+    padding: 0 20px;
+  }
+
+  .FormItem {
+    display: flex;
+  }
+
+  .FormItem_inp {
+    flex: 1;
+  }
+
+  .datalist {
+    display: flex;
+  }
+
+  .datalist p {
+    flex: 1;
+    margin-bottom: 8px;
+  }
+
+  .datalist p img {
+    padding: 0 10px;
+    width: 100%;
+  }
+
+  .img {
+    max-width: 300px;
+  }
+</style>
+

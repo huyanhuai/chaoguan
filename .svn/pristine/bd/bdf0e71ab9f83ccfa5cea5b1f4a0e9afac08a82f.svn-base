@@ -1,0 +1,129 @@
+const getDate = (timestamp) => {
+  var time;
+  if (timestamp == undefined) {
+    time = new Date();
+  } else {
+    time = new Date(timestamp);
+  }
+  var y = time.getFullYear();
+  var m = time.getMonth() + 1;
+  var d = time.getDate();
+  var h = time.getHours();
+  var mm = time.getMinutes();
+  var s = time.getSeconds();
+  return y + '-' + m + '-' + d
+};
+
+const getDate0 = (timestamp) => {
+  var time;
+  // if (timestamp == undefined) {
+  //   time = new Date();
+  // } else {
+    time = new Date(timestamp);
+  // }
+  var y = time.getFullYear();
+  var m = time.getMonth() + 1;
+  var d = time.getDate();
+  var h = time.getHours();
+  var mm = time.getMinutes();
+  var s = time.getSeconds();
+  return y + '-' + m + '-' + d + ' ' + h + ':' + mm + ':' +s
+};
+
+const formatDate = (timestamp, fmt) => {
+  if ( timestamp === undefined || timestamp === null || timestamp === '') {
+    return '';
+  }
+  var date = new Date(timestamp);
+  if(/(y+)/.test(fmt)){
+    fmt = fmt.replace(RegExp.$1, (date.getFullYear()+'').substr(4-RegExp.$1.length));
+  }
+  let o = {
+    'M+': date.getMonth()+1,
+    'd+': date.getDate(),
+    'H+': date.getHours(),
+    'm+': date.getMinutes(),
+    's+': date.getSeconds()
+  };
+  for(let k in o){
+    let str = o[k]+'';
+    if(new RegExp(`(${k})`).test(fmt)){
+      fmt = fmt.replace(RegExp.$1, (RegExp.$1.length===1)?str:padLeftZero(str));
+    }
+  }
+  return fmt;
+};
+
+const hhssmm = (time) => {
+  time = new Date(time);
+  var h = time.getHours();
+  var mm = time.getMinutes();
+  var s = time.getSeconds();
+  return h + ':' + mm + ':' + s
+};
+
+const add0 = (m) => {
+  return m < 10 ? '0' + m : m
+};
+
+function padLeftZero(str){
+  return ('00'+str).substr(str.length);
+}
+
+function getNowFormatDate() {
+  var str = "星期";
+  var week = new Date().getDay();
+  switch (week) {
+    case 0:
+      str += "日";
+      break;
+    case 1:
+      str += "一";
+      break;
+    case 2:
+      str += "二";
+      break;
+    case 3:
+      str += "三";
+      break;
+    case 4:
+      str += "四";
+      break;
+    case 5:
+      str += "五";
+      break;
+    case 6:
+      str += "六";
+      break;
+  }
+  var date = new Date();
+  var seperator1 = "-";
+  var seperator2 = ":";
+  var month = date.getMonth() + 1;
+  var strDate = date.getDate();
+  if (month >= 1 && month <= 9) {
+    month = "0" + month;
+  }
+  if (strDate >= 0 && strDate <= 9) {
+    strDate = "0" + strDate;
+  }
+  var currentDate = date.getFullYear() + seperator1 + month + seperator1 + strDate +
+    "           " + str + "              " + date.getHours() + seperator2 + date.getMinutes();
+
+  return currentDate;
+}
+
+
+function withinErrorMargin(left, right) {
+  return Math.abs(left - right) < Number.EPSILON * Math.pow(2, 2);
+}
+
+export {
+  getDate,
+  getDate0,
+  add0,
+  formatDate,
+  getNowFormatDate,
+  withinErrorMargin,
+  hhssmm
+}

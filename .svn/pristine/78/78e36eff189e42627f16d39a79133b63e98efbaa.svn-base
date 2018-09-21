@@ -1,0 +1,145 @@
+<template>
+  <div class="AgentList">
+    <Spin size="large" fix v-show="spinShow"></Spin>
+    <big-img v-if="bigImg" @clickit="viewImg" :imgSrc="bigImgSrc"></big-img>
+    <div>
+      <h3 style="padding: 10px 0;">代理商店铺数据统计： </h3>
+      <Table style="margin-bottom:8px;" border :loading="dataLoading" :columns="TableTop" :data="tableData"></Table>
+      <Page width="100%" @on-change="chang" :total="total" :current.sync="Inquire.pageNum" show-elevator style="text-align:right"></Page>
+    </div>
+  </div>
+</template>
+<script>
+  import BigImg from '../../module/BigImg.vue';
+  import {getDate,shm,getDate0} from "../../../js/public";
+  export default {
+    data() {
+      return {
+        dataLoading: false,
+        infoShow: false,
+        spinShow: false,
+        bigImg: false,
+        Inquire: {
+          pageNum: 1,
+        },
+        total: 0,
+        tableData: [],
+        TableTop: [
+          {
+            title: "代理商名称",
+            key: "agentUserName",
+            align: "center",
+            width: 135,
+            fixed: "left",
+          },
+          {
+            title: "店铺浏览次数",
+            key: "pvCount",
+            align: "center"
+          },
+          {
+            title: "海报分享次数",
+            key: "sharePosterCount",
+            align: "center"
+          },
+          {
+            title: "链接分享次数",
+            key: "shareLinkCount",
+            align: "center"
+          },
+          {
+            title: "个人海报二维码分享次数",
+            key: "sharePosterCodeCount",
+            align: "center"
+          },
+          {
+            title: "线下布局地址",
+            key: "userAddress",
+            align: "center"
+          },
+          {
+            title: "大海报桌牌投放数量",
+            key: "bigPosterCount",
+            align: "center"
+          },
+          {
+            title: "小海报桌牌投放数量",
+            key: "smallPosterCount",
+            align: "center"
+          },
+        ],
+      };
+    },
+    methods: {
+      // 分页
+      chang(pageNum) {
+        this.Inquire.pageNum = pageNum;
+        this.Comfort();
+      },
+
+      Comfort() {
+        this.dataLoading = true;
+        let data = this.Inquire;
+        this.axios
+          .post(`${this.AjaxUrl}/ty_manage/agent/count/agentCountRank`,this.qs.stringify(data))
+          .then(res => {
+            if (res.errorCode === 200) {
+              this.tableData = res.data.list;
+              this.total = res.data.total;
+            } else {
+              this.$Message.error(res.message);
+            }
+            this.dataLoading = false;
+          })
+          .catch(err => {
+            console.log(err);
+            this.dataLoading = false;
+          });
+      },
+      viewImg(){
+        this.bigImg = false;
+      },
+    },
+    mounted() {
+      this.Comfort();
+    },
+    components: {
+      'big-img':BigImg,      
+    },
+  };
+</script>
+
+<style scoped>
+  .AgentList {
+    background: #fff;
+    padding: 0 20px;
+  }
+
+  .FormItem {
+    display: flex;
+  }
+
+  .FormItem_inp {
+    flex: 1;
+  }
+
+  .imgInfo {
+    max-width: 300px;
+  }
+
+  .datalist {
+    display: flex;
+  }
+
+  .datalist p {
+    flex: 1;
+    margin-bottom: 8px;
+  }
+
+  .datalist p img {
+    padding: 0 10px;
+    width: 100%;
+  }
+</style>
+
+

@@ -1,0 +1,382 @@
+<template>
+    <div class="Package" style="margin:0 auto;width:900px">
+        <div class="packageTop"> {{packageTop}}
+            <Button @click="close" style="float:right;"> <Icon type="close"></Icon></Button>
+        </div>
+        <div v-show="PackageListShow" style="margin-top:30px;background:#fff"> 
+            <Table  highlight-row  ref="currentRowTable" :columns="PackageTop" :data="PackageList"></Table> 
+        </div>
+            
+        <div v-show="PackageShow">
+            <div> 
+                <div class="SetMeal"> 
+                    <div class="InputList" style="margin-top:10px;">
+                    <div>
+                        <label for="">套餐名称</label>
+                        <Input style="width: 70%" v-model="Package.comboName"></Input>
+                    </div>
+                    <div>
+                        <label for="">是否包含早餐</label>
+                        <Select v-model="Package.includeBreakfast"  style="width: 70%">
+                            <Option  key="0" value="0">否</Option>
+                            <Option  key="1" value="1">是</Option>
+                        </Select>
+                    </div>
+                    <div>
+                        <label for="">退款</label>
+                        <Select class="width70" style="width: 70%"  v-model="Package.refundType">
+                            <Option value="REFUND">可取消</Option>
+                            <Option value="NO_REFUND">不可取消</Option>
+                        </Select>
+                    </div> 
+                    </div> 
+
+                    <div class="InputList" style="margin-top:10px;">
+                    <div>
+                        <label for="">门市价</label>
+                        <InputNumber style="width: 70%" v-model="Package.retailPrice"></InputNumber>
+                    </div>
+                    <div>
+                        <label for="">销售价</label>
+                        <InputNumber style="width: 70%" v-model="Package.salePrice"></InputNumber>
+                    </div>
+                    <div>
+                        <label for="">结算价</label>
+                        <InputNumber style="width: 70%" v-model="Package.settlementPrice"></InputNumber>
+                    </div>
+                    </div>
+                    <div class="InputList" style="margin-top:10px;">
+                    <div>
+                        <label for="">平台佣金</label>
+                        <InputNumber style="width: 70%" v-model="Package.platformCommission"></InputNumber>
+                    </div>
+                    <div>
+                        <label for="">默认代理佣金</label>
+                        <InputNumber style="width: 70%" v-model="Package.defaultAgentCommission"></InputNumber>
+                    </div>
+                    <div>
+                        <label for="">默认业务佣金</label>
+                        <InputNumber style="width: 70%" v-model="Package.defaultSaleCommission"></InputNumber>
+                    </div>
+                    </div> 
+                    <div :style="[isA?styleA: styleB]"> 
+                        <h3> * 平台销售价 = 结算价 + 平台佣金 + 默认代理佣金 + 默认业务佣金</h3>
+                    </div>
+                    <div class="SetForm" >
+                    <div style="margin-top:10px;">
+                        <label>备注</label>
+                        <Input  v-model="Package.remark" class="width70" style="width: 70%"></Input>
+                    </div>
+                    </div>
+                    <div style="text-align:center;padding:5px 0;"> 
+                        <Button type="success" @click="Submitpackage"> 提交</Button>
+                        <Button type="success" @click="goback"> 返回</Button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+<script>
+import { getDate, accAdd, accSub } from "../../../js/public.js";
+export default {
+    props: {
+        hotelRoomId: Number
+    },
+    data() {
+        return {
+            thirdStep: true,
+            PackageListShow: true,
+            PackageShow: false,
+            packageTop: "编辑套餐",
+            Package: {
+                comboName: "",
+                includeBreakfast: "0",
+                retailPrice: 0,
+                salePrice: 0,
+                settlementPrice: 0,
+                platformCommission: 0,
+                defaultAgentCommission: 0,
+                defaultSaleCommission: 0,
+                refundType: "REFUND",
+                remark: ""
+            },
+            hotelRoomComboId: "",
+            styleA:{
+                color: 'red'
+            },
+            styleB:{ 
+            },
+            isA: false,
+            PackageList: [],
+            PackageTop: [
+                {
+                    title: "套餐名称",
+                    key: "comboName",
+                    align: "center",
+                    width: 150,
+                    fixed: "left"
+                },
+                {
+                    title: "是否包含早餐",
+                    key: "includeBreakfast",
+                    align: "center",
+                    render: (h, par) => {
+                        let num = par.row.includeBreakfast;
+                        if (num == 0) {
+                        return "否";
+                        } else {
+                        return "是";
+                        }
+                    }
+                },
+                {
+                    title: "门市价",
+                    key: "retailPrice",
+                    align: "center"
+                },
+                {
+                    title: "销售价",
+                    key: "salePrice",
+                    align: "center"
+                },
+                {
+                    title: "结算价",
+                    key: "settlementPrice",
+                    align: "center"
+                },
+                {
+                    title: "平台佣金",
+                    key: "platformCommission",
+                    align: "center"
+                },
+                {
+                    title: "默认代理佣金",
+                    key: "defaultAgentCommission",
+                    align: "center"
+                },
+                {
+                    title: "默认业务佣金",
+                    key: "defaultSaleCommission",
+                    align: "center"
+                },
+                {
+                    title: "操作",
+                    key: "startDate",
+                    width: 165,
+                    fixed: "right",
+                    align: "center",
+                    render: (h, params) => {
+                        return h("div", [
+                        h(
+                            "Button",
+                            {
+                            props: {
+                                type: "success",
+                                size: "small"
+                            },
+                            style: {
+                                marginRight: "5px"
+                            },
+                            on: {
+                                click: () => {
+                                this.PackageEditor(params.index);
+                                }
+                            }
+                            },
+                            "编辑"
+                        ),
+                        ]);
+                    }
+                }
+            ],
+        }
+    },
+    watch: {
+        hotelRoomId: function() {
+            this.getList();
+        }
+    },
+    methods: {
+        close() {
+            this.PackageListShow = true;
+            this.PackageShow = false;
+            this.$emit("packageClose", true);
+        },
+        goback() {
+            this.PackageListShow = true;
+            this.PackageShow = false;
+        },
+        // 编辑内容
+        PackageEditor(index) {
+            this.PackageListShow = false;
+            this.PackageShow = true;
+            let {
+                comboName,
+                retailPrice,
+                salePrice,
+                settlementPrice,
+                platformCommission,
+                defaultAgentCommission,
+                defaultSaleCommission,
+                hotelRoomComboId,
+                hotelRoomId,
+                includeBreakfast,
+                refundType,
+                remark
+            } = this.PackageList[index];
+
+            this.Package.comboName = comboName;
+            this.Package.includeBreakfast = includeBreakfast.toString();
+            this.Package.retailPrice = retailPrice;
+            this.Package.salePrice = salePrice;
+            this.Package.settlementPrice = settlementPrice;
+            this.Package.platformCommission = platformCommission;
+            this.Package.defaultAgentCommission = defaultAgentCommission;
+            this.Package.defaultSaleCommission = defaultSaleCommission;
+            this.Package.refundType = refundType;
+            this.Package.remark = remark;
+            this.hotelRoomId = hotelRoomId;
+            this.hotelRoomComboId = hotelRoomComboId;
+        },
+        // 编辑提交
+        Submitpackage() {
+            let data = {};
+            let {
+                comboName,
+                includeBreakfast,
+                retailPrice,
+                salePrice,
+                settlementPrice,
+                platformCommission,
+                defaultAgentCommission,
+                defaultSaleCommission,
+                refundType,
+                remark
+            } = this.Package;
+            if (this.Package.comboName == "" || this.Package.comboName == null) {
+                    this.error("请填写套餐名称");
+                    return false;
+                }
+
+            data.hotelRoomId = this.hotelRoomId;
+            data.includeBreakfast = includeBreakfast;
+
+            let num1 = accAdd(Number(settlementPrice),Number(platformCommission));
+            let num2 = accAdd(Number(defaultAgentCommission),Number(defaultSaleCommission));
+            let num3 = accAdd(num1,num2);
+            if(num3 != Number(salePrice)){
+                this.error("平台销售价 = 结算价 + 平台佣金 + 默认代理佣金 + 默认业务佣金")
+                this.isA = true;
+            }else{
+            data.retailPrice = Number(retailPrice);
+            data.salePrice = Number(salePrice);
+            data.settlementPrice = Number(settlementPrice);
+            data.platformCommission = Number(platformCommission);
+            
+            data.defaultAgentCommission = Number(defaultAgentCommission);
+            data.defaultSaleCommission = Number(defaultSaleCommission);
+            data.comboName = comboName;
+            data.refundType = refundType;
+            data.remark = remark;
+            let url = "";
+                url = `${this.AjaxUrl}/ty_manage/hotel/room/combo/update`;
+                data.hotelRoomComboId = this.hotelRoomComboId;
+            this.axios
+                .post(url, this.qs.stringify(data))
+                .then(res => {
+                    if(res.errorCode == 200){
+                        this.success("操作成功！");
+                        this.PackageListShow = true;
+                        this.PackageShow = false;
+                        this.getList();
+                    }else if(res.errorCode == 400){
+                        this.error("所有内容都必须填写!");
+                    }else{
+                        this.error(res.message);
+                    }
+                })
+                .catch(err => {});
+                }
+        },
+        // 查询列表
+        getList() {
+            this.axios
+                .get(`${this.AjaxUrl}/ty_manage/hotel/room/combo/getList`, {
+                    params: {
+                        hotelRoomId: this.hotelRoomId,
+                    }
+                })
+                .then(res => {
+                    if(res.errorCode == 200){
+                        this.PackageList = res.data;
+                    }else if(res.errorCode == 303){
+                        this.error(res.message);
+                    }else{
+                        this.error(res.message);
+                    }
+                })
+                .catch(err => {
+                    //this.error(err.data.msg);
+                });
+        },
+        success(text) { 
+            this.$Message.success(text);
+        },
+        error(text) {
+            this.$Message.error(text);
+        }
+    },
+    created() {
+        this.getList();
+    },
+    mounted() {
+        
+    },
+}   
+</script>
+<style>
+.Package {
+  position: absolute;
+  min-height: 600px;
+  width: 70%;
+  background: #fff;
+  border: 4px solid #eee;
+  z-index: 888;
+  border-radius: 12px;
+  top: 10%;
+  left: 15%;
+}
+.Package label{
+    display: inline-block;
+    width: 72px;
+}
+.Package .packageTop {
+    font-size: 16px;
+    text-indent: 24px;
+    height: 30px;
+    line-height: 30px;
+    border-bottom: 1px solid #eee;
+}
+.SetMeal {
+  height: 550px;
+  overflow: auto;
+  padding: 0 10px;
+}
+.InputList {
+  display: flex;
+  background: #ffffff;
+  justify-content: space-between;
+}
+.InputList div {
+    flex: 1;
+    margin: 4px 0;
+  }
+.InputList div label {
+    display: inline-block;
+    width: 72px;
+    text-align: left;
+    margin-left: 5px;
+}
+
+</style>

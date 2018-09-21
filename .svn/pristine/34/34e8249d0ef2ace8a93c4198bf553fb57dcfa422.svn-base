@@ -1,0 +1,1090 @@
+<template>
+  <div class="ProductList">
+    <div v-show="product">
+    <Form :label-width="80" style="padding-top:20px;">
+      <div class="FormItem">
+        <FormItem label="产品名称" class="FormItem_inp">
+          <Input v-model="Inquire.productName" placeholder="请输入产品名称、标题"></Input>
+        </FormItem>
+        <FormItem label="产品编码" class="FormItem_inp">
+          <Input v-model="Inquire.productCode" placeholder="请输入产品编码"></Input>
+        </FormItem>
+        <FormItem label="商家名称" class="FormItem_inp">
+          <Input v-model="Inquire.enterpriseName" placeholder="请输入商家名称"></Input>
+        </FormItem>
+      </div>
+      <div class="FormItem">
+        <FormItem label="产品状态" class="FormItem_inp">
+          <Select v-model="Inquire.status" clearable>
+            <Option v-for="item in statusList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="API类型" class="FormItem_inp">
+          <Select v-model="Inquire.apiConfig" clearable>
+            <Option v-for="item in apiList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="" class="FormItem_inp">
+          <!-- <Select v-model="Inquire.isReally" clearable>
+            <Option v-for="item in reallyList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select> -->
+        </FormItem>
+      </div>
+    </Form>
+    <div style="text-align:center;margin-bottom:10px;">
+      <Button type="success" @click="Excel" style="float:left">导出Excel</Button>
+      <Button type="success" @click="getList">搜索</Button>
+    </div>
+    
+      <Table style="margin-bottom:8px;" border :loading="loading" :columns="TableTop" :data="tableData"></Table>
+      <Page width="100%" @on-change="chang" :total="total" show-elevator style="text-align:right;margin-bottom:20px;"></Page>
+    </div>
+    <Modal
+      v-model="productInfoShow"
+      title="产品内容"
+      width="740px">
+          <p ref="editors"></p>
+    </Modal>
+    <Modal
+      v-model="packageInfoShow"
+      title="套餐详情"
+      width="740px">
+          <p ref="imgs" style="text-align:center;"></p>
+          <p ref="editor"></p>
+    </Modal>
+
+    <!-- 商品详情 -->
+      <div v-show="packageShow" style="position: fixed;overflow: auto;top: 0;right: 0;bottom: 0;width:100%;height:100%;background: rgba(0,0,0,.5);z-index:900;">
+        <transition  enter-active-class="animated zoomInLeft" leave-active-class="animated zoomOutRight">
+          <EditProduct  v-show="packageShow"  :productId.sync="productIdList"  @closechang="closechang"></EditProduct>
+        </transition>
+      </div>
+    <!-- 套餐 -->
+      <div v-show="Listshow" style="position: fixed;overflow: auto;top: 0;right: 0;bottom: 0;width:100%;height:100%;background: rgba(0,0,0,.5);z-index:900;">
+        <transition  enter-active-class="animated zoomInLeft" leave-active-class="animated zoomOutRight">
+          <EditPackage  @Shutdown="changer" v-show="Listshow"  @close="close"  :packageId.sync="packageIdList"></EditPackage>
+           <!-- <EditPackage  v-show="Listshow" ></EditPackage> -->
+        </transition>
+      </div>
+
+    <!-- 套餐列表 -->
+      <div style="margin-top:10px;" v-show="productPackage">
+          <h3 style="padding: 8px 5px;">产品名称：{{productName}}</h3>
+          <Table highlight-row  ref="currentRowTable" :columns="ProductTop" :data="PackageList" ></Table>
+          <!-- <div style="text-align:right;">
+            <Page  :total="total"   :current.sync="pageNum"  :pageSize="pagesize"   show-elevator></Page>
+          </div>       -->
+          <Button type="success" style="margin: 8px 8px;" @click="back">返回</Button>
+      </div>
+    <!-- 海报弹框 -->
+    <Modal
+      v-model="poster"
+      title="海报（比例：6 : 7.5）"
+      :mask-closable="false"
+      @on-cancel="cancel">
+      <p style="text-align: center;">
+        <!-- <Upload
+            :before-upload="handleUploadImg"
+            :show-upload-list="false"
+            action="//jsonplaceholder.typicode.com/posts/">  -->
+            <img :src="PictureImg" style="width:180px;height:225px;">
+        <!-- </Upload> -->
+        <Upload
+            :before-upload="handleUploadImg"
+            action="//jsonplaceholder.typicode.com/posts/">
+            <Button type="ghost" icon="ios-cloud-upload-outline">上 传 海 报</Button>
+        </Upload>
+      </p>
+      <div slot="footer">
+        <Button type="text" size="large" @click="addCancel">取消</Button>
+        <Button type="primary" size="large" :loading="addLoading"  @click="addPoster">确认</Button>
+      </div>
+    </Modal>
+    <!-- 上下架 -->
+    <Modal
+        title="上下架"
+        v-model="upShow"
+        :mask-closable="false">
+        <h3 style="text-align: center;">{{upTitle}}</h3>
+        <div slot="footer">
+          <Button type="text" size="large" @click="upCancel">取消</Button>
+          <Button type="primary" size="large" :loading="upLoading" @click="upSub">确认</Button>
+      </div>
+    </Modal>
+
+    <!--热门目的地-->
+    <Modal
+      :closable="false"
+      :mask-closable="false"
+      v-model="editDesShow" title="编辑热门目的地">
+      <div style="border-bottom: 1px solid #e9e9e9;padding-bottom:6px;margin-bottom:6px;">
+        <Checkbox
+          :indeterminate="indeterminate"
+          :value="checkAll"
+          @click.prevent.native="handleCheckAll">全选
+        </Checkbox>
+      </div>
+      <CheckboxGroup v-model="checkAllGroup" @on-change="checkAllGroupChange">
+        <Checkbox v-for="item in HotDesList" :label="item.subjectId" :key="item.subjectId" style="margin-right: 30px;">{{item.subjectName}}
+        </Checkbox>
+      </CheckboxGroup>
+      <div slot="footer">
+        <Button type="text" size="large" @click="editCancel()">取消</Button>
+        <Button type="primary" size="large" :loading="editLoading" @click="editDes()">确认</Button>
+      </div>
+    </Modal>
+
+    <!--热门专题-->
+    <Modal
+      :closable="false"
+      :mask-closable="false"
+      v-model="editTopicShow" title="编辑热门专题">
+      <div style="border-bottom: 1px solid #e9e9e9;padding-bottom:6px;margin-bottom:6px;">
+        <Checkbox
+          :indeterminate="indeterminate"
+          :value="checkAll"
+          @click.prevent.native="handleCheckAll">全选
+        </Checkbox>
+      </div>
+      <CheckboxGroup v-model="checkAllGroup" @on-change="checkAllGroupChange">
+        <Checkbox v-for="item in HotDesList" :label="item.subjectId" :key="item.subjectId" style="margin-right: 30px;">{{item.subjectName}}
+        </Checkbox>
+      </CheckboxGroup>
+      <div slot="footer">
+        <Button type="text" size="large" @click="editCancel()">取消</Button>
+        <Button type="primary" size="large" :loading="editLoading" @click="editTopic()">确认</Button>
+      </div>
+    </Modal>
+  </div>
+</template>
+<script>
+import {getDate,shm} from "../../../js/public";
+import EditProduct from "./EditProduct";
+import EditPackage from "./EditPackage";
+  export default {
+    components: {
+      EditProduct,
+      EditPackage
+    },
+    data() {
+      return {
+        upShow: false,
+        upLoading: false,
+        upTitle: "",
+        upProductId: null,
+        upStatus: null,
+        loading: true,
+        Listshow: false,
+        editDesShow: false,
+        editTopicShow: false,
+        editLoading: false,
+        indeterminate: true,
+        checkAll: false,
+        poster: false,
+        addLoading: false,
+        imglist: "",
+        posterId: "",
+        PictureImg: require("./../../../assets/a11.png"),
+        HotDesList: [],
+        HotDesIdList:[],
+        checkAllGroup: [],
+        /*目的地*/
+        editDesList: {
+          productId: null,
+          subjectType: 1,
+          subjectIds: ''
+        },
+        /*专题*/
+        editTopicList: {
+          productId: null,
+          subjectType: 2,
+          subjectIds: ''
+        },
+        productInfoShow: false,
+        packageInfoShow: false,
+        productInfo: {},
+        productPackage: false,
+        product: true,
+        productName: "",
+        Inquire: {
+          pageNum: 1,
+          productName: null,
+          enterpriseName: null,
+          productCode: null,
+          status: null,
+          isReally: null,
+          apiConfig: null
+        },
+        statusList: [
+          {label: "上架", value: "1"},
+          {label: "下架", value: "0"}
+        ],
+        reallyList: [
+          {label: "真实", value: "1"},
+          {label: "虚拟", value: "0"}
+        ],
+        apiList: [
+          {label: "同游平台", value: "TONGYOU"},
+          {label: "智游宝", value: "ZYB"}
+        ],
+        total: 0,
+        tableData: [],
+        TableTop: [
+          {
+            title: "产品名称",
+            key: "productName",
+            align: "center",
+            width: 140,
+            fixed: "left"
+          },
+          {
+            title: "ID",
+            key: "productId",
+            width: 60,
+            align: "center"
+          },
+          {
+            title: "产品标题",
+            key: "productTitle",
+            minWidth: 140,
+            align: "center"
+          },
+          {
+            title: "产品编码",
+            key: "productCode",
+            minWidth: 100,
+            align: "center"
+          },
+          {
+            title: "地址",
+            key: "address",
+            minWidth: 160,
+            align: "center"
+          },
+          {
+            title: "产品状态",
+            key: "status",
+            minWidth: 100,
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              let icon = "";
+              let color = "";
+              if (params.row.status === 0) {
+                text = "下架";
+                icon = "android-arrow-dropdown-circle";
+                color = "red"
+              } else {
+                text = "上架";
+                icon = "android-arrow-dropup-circle";
+                color = "green"
+              }
+              return h("div", [
+                h("Icon", {
+                  props: {
+                    type: icon,
+                    color: color
+                  }
+                }),
+                h("strong", {
+                  style: {
+                    color: color
+                  }
+                }, text)
+              ]);
+            }
+          },
+          // {
+          //   title: "是否真实",
+          //   key: "isReally",
+          //   align: "center",
+          //   render: (h, params) => {
+          //     let text = "";
+          //     if (params.row.isReally === 0) {
+          //       text = "虚拟";
+          //     } else {
+          //       text = "真实";
+          //     }
+          //     return h("div", [
+          //       h("strong", text)
+          //     ]);
+          //   }
+          // },
+          {
+            title: "API类型",
+            key: "apiConfig",
+            minWidth: 100,
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              let color = "";
+              if (params.row.apiConfig === "ZYB") {
+                text = "智游宝";
+                color = "red"
+              } else {
+                text = "同游平台";
+                color = "green"
+              }
+              return h("div", [
+                h("strong", {
+                  style: {
+                    color: color
+                  }
+                }, text)
+              ]);
+            }
+          },
+          // {
+          //   title: "是否实名制",
+          //   key: "isRealName",
+          //   align: "center",
+          //   render: (h, params) => {
+          //     let text = "";
+          //     let color = "";
+          //     if (params.row.isRealName === 0) {
+          //       text = "否";
+          //       color = "green";
+          //     } else {
+          //       text = "是";
+          //       color = "red";
+          //     }
+          //     return h("div", [
+          //       h("Icon", {
+          //         props: {
+          //           type: "person",
+          //           color: color
+          //         }
+          //       }),
+          //       h("strong", text)
+          //     ]);
+          //   }
+          // },
+          {
+            title: "商家名称",
+            key: "enterpriseName",
+            minWidth: 140,
+            align: "center",
+            // fixed: "right"
+          },
+          {
+            title: '上下架',
+            key: 'install',
+            width: 80,
+            align: 'center',
+            render: (h, params) => {
+              let icon = "";
+              let type = "";
+              if(params.row.status == 0) {
+                icon = "arrow-up-a";
+                type = "success";
+              }else if(params.row.status == 1) {
+                icon = "arrow-down-a";
+                type = "error";
+              }
+              return h("div", [
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: type,
+                      size: "small",
+                      shape: 'circle',
+                      icon: icon
+                    },
+                    style: {
+                      margin: "3px 5px 3px 0",
+                    },
+                    on: {
+                      click: () => {
+                        this.upAdown(params.row.productId,params.row.status)
+                      }
+                    }
+                  },
+                  // text
+                ),
+              ]);
+            }
+          },
+          {
+            title: '设置热门目的地',
+            key: 'hotType',
+            width: 90,
+            align: 'center',
+            render: (h, params) => {
+              return h('div', [
+                h('Button', {
+                  props: {
+                    type: 'primary',
+                    size: 'small',
+                    shape: 'circle',
+                    icon: 'edit'
+                  },
+                  style: {
+                    marginRight: '5px'
+                  },
+                  on: {
+                    click: () => {
+                      this.editDesModelShow(params.row)
+                    }
+                  }
+                })
+              ])
+            }
+          },
+          {
+            title: '设置热门专题',
+            key: 'hotType',
+            width: 90,
+            align: 'center',
+            render: (h, params) => {
+              return h('div', [
+                h('Button', {
+                  props: {
+                    type: 'primary',
+                    size: 'small',
+                    shape: 'circle',
+                    icon: 'edit'
+                  },
+                  style: {
+                    marginRight: '5px'
+                  },
+                  on: {
+                    click: () => {
+                      this.editTopicModelShow(params.row)
+                    }
+                  }
+                })
+              ])
+            }
+          },
+          {
+            title: '设置海报',
+            key: 'coverImg',
+            width: 80,
+            align: 'center',
+            render: (h, params) => {
+              return h("div", [
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: "primary",
+                      size: "small"
+                    },
+                    style: {
+                      margin: "3px 5px 3px 0",
+                    },
+                    on: {
+                      click: () => {
+                        this.edposter(params.row.productId,params.row.coverImg)
+                      }
+                    }
+                  },
+                  "编辑"
+                ),
+              ]);
+            }
+          },
+          {
+            title: "操作",
+            key: "操作",
+            align: "center",
+            width: 220,
+            fixed: "right",
+            render: (h, params) => {
+              return h("div", [
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: "primary",
+                      size: "small"
+                    },
+                    style: {
+                      margin: "3px 5px 3px 0",
+                    },
+                    on: {
+                      click: () => {
+                        this.EditProduct(params.index)
+                      }
+                    }
+                  },
+                  "编辑"
+                ),
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: "primary",
+                      size: "small"
+                    },
+                    style: {
+                      margin: "3px 5px 3px 0",
+                    },
+                    on: {
+                      click: () => {
+                        this.getProductInfo(params.row.detail)
+                      }
+                    }
+                  },
+                  "产品内容"
+                ),
+                h(
+                  "Button",
+                  {
+                    props: {
+                      type: "primary",
+                      size: "small"
+                    },
+                    style: {
+                      marginRight: "5px"
+                    },
+                    on: {
+                      click: () => {
+                        this.getPackageInfo(params.row.productId,params.row.productName)
+                      }
+                    }
+                  },
+                  "套餐详情"
+                ),
+              ]);
+            }
+          }
+        ],
+        PackageList: [],
+        ProductTop: [
+        {
+          title: "套餐名称",
+          key: "packageName",
+          align: "center",
+          width: 150,
+          fixed: "left"
+        },
+        // {
+        //   title: "套餐类型",
+        //   key: "productPackageTypeId",
+        //   width: 130,
+        //   align: "center",
+        //   render: (h, par) => {
+        //     let type = par.row.productPackageTypeRelativeList;
+        //     let text = "";
+        //     // for (let i = 0; i < this.PackageType.length; i++) {
+        //       for (let k = 0; k < type.length; k++) {
+        //         // if (type[k].productPackageTypeId == this.PackageType[i].value) {
+        //           text += type[k].typeName + "|";
+        //         // }
+        //       // }
+        //     }
+        //    return h("div", [
+        //         h("strong", text)
+        //     ]);
+        //   }
+        // },
+        {
+          title: "门市价",
+          key: "retailPrice",
+          width: 130,
+          align: "center"
+        },
+        {
+          title: "销售价",
+          key: "salePrice",
+          width: 130,
+          align: "center"
+        },
+        {
+          title: "结算价",
+          key: "settlementPrice",
+          width: 130,
+          align: "center"
+        },
+        {
+          title: "平台佣金",
+          key: "platformCommission",
+          width: 130,
+          align: "center"
+        },
+        {
+          title: "默认代理佣金",
+          key: "defaultAgentCommission",
+          width: 130,
+          align: "center"
+        },
+        {
+          title: "默认业务佣金",
+          key: "defaultSaleCommission",
+          width: 130,
+          align: "center"
+        },
+        {
+          title: "销售开始时间",
+          width: 130,
+          key: "startDate",
+          align: "center",
+          render: (h, par) => {
+            return h("div", [
+                h("strong", getDate(par.row.startDate))
+            ]);
+          }
+        },
+        {
+          title: "销售结束日期",
+          width: 130,
+          key: "endDate",
+          align: "center",
+          render: (h, par) => {
+            return h("div", [
+                h("strong", getDate(par.row.endDate))
+            ]);
+          }
+        },
+        {
+          title: "截止销售时间",
+          width: 130,
+          key: "endSaleStr",
+          align: "center",
+          render: (h, par) => {
+            return h("div", [
+                h("strong", shm(par.row.endSale))
+            ]);
+          }
+        },
+        {
+          title: "退款",
+          key: "refundType",
+          width: 130,
+          align: "center",
+          render: (h, par) => {
+            let text = "";
+            if (par.row.refundType == "REFUND") {
+              text = "条件退";
+            } else {
+              text ="概不退换";
+            }
+            return h("div", [
+                h("strong", text)
+            ]);
+          }
+        },
+        {
+          title: "操作",
+          key: "startDate",
+          width: 180,
+          fixed: "right",
+          align: "center",
+          render: (h, params) => {
+            return h("div", [
+              h(
+                "Button",
+                {
+                  props: {
+                    type: "primary",
+                    size: "small"
+                  },
+                  style: {
+                    margin: "3px 5px 3px 0",
+                  },
+                  on: {
+                    click: () => {
+                      this.Editpackage(params.index)
+                    }
+                  }
+                },
+                "编辑"
+              ),
+              h('Button', {
+                props: {
+                    type: 'primary',
+                    size: 'small',
+                },
+                style: {
+                    marginRight: '5px'
+                },
+                on: {
+                    click: () => {
+                    this.ModelImg(params.row.coverImg)
+                    }
+                }
+              },"海报"),
+              h(
+                "Button",
+                {
+                  props: {
+                    type: "success",
+                    size: "small"
+                  },
+                  style: {
+                    marginRight: "5px"
+                  },
+                  on: {
+                    click: () => {
+                      this.PackageEditor(params.row.detail);
+                    }
+                  }
+                },
+                "预览"
+              ),
+            ]);
+          }
+        }
+      ],
+      productIdList: null,
+      packageIdList: null,
+      packageShow: false,
+      };
+    },
+    methods: {
+      cancel() {},
+      closechang(res) {
+      // if (res) {
+        this.packageShow = false;
+        this.getList();
+      // }
+      },
+      changer(res){
+        this.Listshow = false;
+      },
+      close(res) {
+        this.Listshow = res;
+      },
+      EditProduct(index) {
+        this.packageShow = true;
+        this.productIdList = this.tableData[index];
+      },
+      Editpackage(index) {
+        this.Listshow = true;
+        this.packageIdList = this.PackageList[index];
+        console.log(this.packageIdList);
+      },
+      chang(pageNum) {
+        this.Inquire.pageNum = pageNum;
+        this.getList();
+      },
+      addCancel() {
+      this.poster = false;
+    },
+    edposter(productId,coverImg) {
+      this.poster = true;
+      this.posterId = productId;
+      this.imglist = coverImg;
+      this.PictureImg = this.imgUrl + coverImg + '.jpg';
+    },
+    //上下架弹框
+    upAdown(id,num) {
+      this.upShow = true;
+      this.upProductId = id;
+      this.ipStatus = num;
+      if(this.ipStatus == 0) {
+        this.upTitle = "请确认产品是否上架？"
+      } else if(this.ipStatus == 1) {
+        this.upTitle = "请确认产品是否下架？"
+      }
+    },
+    upSub() {
+      this.upLoading = true;
+      const title = '提示';
+      let content = '';
+      let url = "";
+      if(this.ipStatus == 0) {
+        url = `${this.AjaxUrl}/ty_manage/product/putProduct`;
+        content = '<h3>上架成功</h3>';
+      } else if(this.ipStatus == 1) {
+        url = `${this.AjaxUrl}/ty_manage/product/outProduct`;
+        content = '<h3>下架成功</h3>';
+      }
+      let data = {};
+      data.productId = this.upProductId;
+      this.axios
+          .post(url,this.qs.stringify(data))
+          .then(res => {
+            if (res.errorCode == 200) {
+              this.upLoading = false;
+              this.upShow = false;
+              this.$Modal.success({
+                  title: title,
+                  content: content
+              });
+              this.getList();
+            }else{
+              this.upLoading = false;
+              this.$Message.error(res.message);
+            }
+          })
+          .catch(err => {
+            this.upLoading = false;
+          })
+    },
+    upCancel() {
+      this.upShow = false;
+    },
+
+      //海报弹框
+    addPoster() {
+        let data = {};
+        data.productId = this.posterId;
+        data.coverImg = this.imglist;
+        // this.addLoading = true;
+        this.axios
+          .post(
+            `${this.AjaxUrl}/ty_manage/product/update`,
+            this.qs.stringify(data)
+          )
+          .then(res => {
+            if (res.errorCode == 200) {
+              this.$Message.success(res.message);
+              this.imglist = "";
+              this.poster = false;
+              this.getList();
+              // this.addLoading = false;
+            }else{
+              this.addLoading = false;
+              this.$Message.error(res.message);
+            }
+          })
+          .catch(err => {})  
+    },
+    //上传海报图片
+    handleUploadImg(file) {
+      var reader = new FileReader();
+      var _this = this;
+      let data = new FormData();
+      data.append("file", file);
+      this.axios
+        .post(`${this.AjaxUrl}/ty_manage/home/upload`, data)
+        .then(res => {
+          if (res.errorCode == 200) {
+            this.$Message.success("上传成功")
+            this.imglist = res.data;
+          }else{
+            this.$Message.error("图片上传错误")
+          }
+        })
+        .catch(err => {});
+
+      reader.readAsDataURL(file);
+      reader.onload = function(e) {
+        _this.PictureImg = this.result;
+      };
+      return false;
+    },
+      /**
+       * 编辑model
+       * @param e
+       */
+      editDesModelShow(e) {
+        // console.log(e)
+        this.editDesList.productId = e.productId;
+        this.axios.get(`${this.AjaxUrl}/ty_manage/subject/getCheckList`, {
+          params: this.editDesList
+        }).then(res => {
+          console.log(res);
+          this.HotDesList = res.data;
+          res.data.map(x => {
+            this.HotDesIdList.push(x.subjectId);
+            if(x.isCheck===1){
+              this.checkAllGroup.push(x.subjectId);
+            }
+          });
+        }).catch(err => {
+          console.log(err);
+        });
+
+        this.editDesShow = true;
+      },
+      /*提交目的地编辑*/
+      editDes(){
+
+        this.checkAllGroup.map(x=>{
+          this.editDesList.subjectIds+=x+',';
+        });
+
+        this.axios.post(`${this.AjaxUrl}/ty_manage/product/subject/check`,
+          this.qs.stringify(this.editDesList)
+        ).then(res => {
+          console.log(res);
+          if (res.errorCode === 200) {
+            this.$Message.info("编辑成功");
+            this.getList();
+            this.editDesShow = false;
+            /*清空*/
+            this.editDesList.subjectIds='';
+            this.HotDesList=[];
+            this.HotDesIdList=[];
+            this.checkAllGroup=[];
+          }
+        }).catch(err => {
+          this.$Message.error("编辑失败");
+        });
+
+      },
+      editTopicModelShow(e) {
+
+        this.editTopicList.productId = e.productId;
+        this.axios.get(`${this.AjaxUrl}/ty_manage/subject/getCheckList`, {
+          params: this.editTopicList
+        }).then(res => {
+          console.log(res);
+          this.HotDesList = res.data;
+          res.data.map(x => {
+            this.HotDesIdList.push(x.subjectId);
+            if(x.isCheck===1){
+              this.checkAllGroup.push(x.subjectId);
+            }
+          });
+        }).catch(err => {
+          console.log(err);
+        });
+        this.editTopicShow = true;
+      },
+      /*提交专题的编辑*/
+      editTopic(){
+
+        this.checkAllGroup.map(x=>{
+          this.editTopicList.subjectIds+=x+',';
+        });
+
+        console.log(this.editTopicList.subjectIds);
+        this.axios.post(`${this.AjaxUrl}/ty_manage/product/subject/check`,
+          this.qs.stringify(this.editTopicList)
+        ).then(res => {
+          console.log(res);
+          if (res.errorCode === 200) {
+            this.$Message.info("编辑成功");
+            this.getList();
+            this.editTopicShow = false;
+            /*清空*/
+            this.editTopicList.subjectIds='';
+            this.HotDesList=[];
+            this.HotDesIdList=[];
+            this.checkAllGroup=[];
+          }
+        }).catch(err => {
+          this.$Message.error("编辑失败");
+        });
+
+      },
+      /**
+       * 取消编辑
+       */
+      editCancel() {
+        this.editDesShow = false;
+        this.editTopicShow = false;
+        /*清空*/
+        this.editDesList.subjectIds='';
+        this.HotDesList=[];
+        this.HotDesIdList=[];
+        this.checkAllGroup=[];
+      },
+      handleCheckAll() {
+        if (this.indeterminate) {
+          this.checkAll = false;
+        } else {
+          this.checkAll = !this.checkAll;
+        }
+        this.indeterminate = false;
+
+        if (this.checkAll) {
+          this.checkAllGroup = this.HotDesIdList;
+        } else {
+          this.checkAllGroup = [];
+        }
+      },
+      checkAllGroupChange(data) {
+        if (data.length === 3) {
+          this.indeterminate = false;
+          this.checkAll = true;
+        } else if (data.length > 0) {
+          this.indeterminate = true;
+          this.checkAll = false;
+        } else {
+          this.indeterminate = false;
+          this.checkAll = false;
+        }
+      },
+      // 导出Excel
+      Excel() {
+        let url = `${this.AjaxUrl}/ty_manage/report/exportProductList`;
+        window.open(url);
+      },
+      //查询列表
+      getList() {
+        this.loading = true;
+        this.axios.get(`${this.AjaxUrl}/ty_manage/product/getList`, {
+          params: this.Inquire
+        }).then(res => {
+          this.tableData = res.data.list;
+          this.total = res.data.total;
+          this.loading = false;
+        }).catch(err => {
+          console.log(err);
+          this.loading = false;
+        });
+      },
+      //海报图片
+      ModelImg(img) {
+        this.packageInfoShow = true;
+        let poster = `<img  style="width: 180px;height:225px;" src="${this.imgUrl}${img}.jpg"/>`;
+        this.$refs.editor.innerHTML = "";
+        this.$refs.imgs.innerHTML = poster;
+      },
+      //富文本
+      PackageEditor(detail) {
+        this.packageInfoShow = true;
+        this.$refs.imgs.innerHTML = "";
+        this.$refs.editor.innerHTML = detail;
+      },
+      //产品内容
+      getProductInfo(detail) {
+        this.productInfoShow = true;
+        this.$refs.editors.innerHTML = detail;
+      },
+      //套餐详情
+      getPackageInfo(productId,productName) {
+        this.productPackage = true;
+        this.product = false;
+        this.axios.get(`${this.AjaxUrl}/ty_manage/product/package/getList`, {
+          params: {
+            productId: productId
+          }
+        }).then(res => {
+          console.log(res);
+          this.PackageList = res.data.list;
+          this.productName = productName;
+        }).catch(err => {
+          console.log(err);
+        });
+      },
+      //返回
+      back() {
+        this.productPackage = false;
+        this.product = true;
+        this.getList();
+      }
+    },
+    mounted() {
+      this.getList();
+    }
+  };
+</script>
+
+<style scoped>
+  .ProductList {
+    background: #fff;
+    padding: 0 20px;
+    
+  }
+
+  .FormItem {
+    display: flex;
+  }
+
+  .FormItem_inp {
+    width: 300px;
+    flex: 1;
+  }
+  .w-e-text img{
+  width: 400px !important;
+  height: 260px !important;
+}
+</style>
+

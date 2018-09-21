@@ -1,0 +1,316 @@
+<template>
+  <div class="system">
+
+    <Layout style="min-height:950px;">
+          <Sider hide-trigger>
+            <div>
+                <Menu :theme="theme3" active-name="5" :accordion="true" class="" width="200px;">
+                  
+                  <router-link v-for="(item,key) in menuList"  :name="item.systemAuthId" :key="key"  v-if="item.authList==''" :to="item.pcAuthUrl+'/'">
+                  <MenuItem  :name="item.systemAuthId">
+                      <Icon type="home"></Icon>
+                        <span class="Sp_Color">
+                          {{item.authName}}
+                        </span>
+                  </MenuItem>
+                  </router-link>
+
+                  <Submenu v-else  :name="item.systemAuthId">
+                      <template slot="title">
+                        <Icon :type="iconType[key]"></Icon>
+                        {{item.authName}}
+                      </template>
+                      <router-link v-for="(items,key) in item.authList"  :key="key" :name="items.systemAuthId" :to="items.pcAuthUrl+'/'">
+                      <MenuItem  :name="items.systemAuthId">
+                             <!-- <div style="width:150px;line-height:35px;"> -->
+                              {{items.authName}}
+                            <!-- </div> -->
+                      </MenuItem>
+                      </router-link>
+                  </Submenu>
+
+                  <!-- <Submenu name="1">
+                      <template slot="title">
+                          <Icon type="speakerphone"></Icon>
+                          活动
+                      </template>
+                      <router-link to="/system/buyTicket">
+                      <MenuItem name="1-1">
+                          购票
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/activityOrder">
+                      <MenuItem name="1-2">
+                        活动订单
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/verification">
+                      <MenuItem name="1-3">
+                        核销记录
+                      </MenuItem>
+                    </router-link>
+                  </Submenu> -->
+
+                  <!-- <router-link to="/system/HotelList">
+                      <MenuItem name="14">
+                        <Icon type="monitor"></Icon>
+                          酒店管理
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/hotHotelsTopic">
+                      <MenuItem name="15">
+                        <Icon type="monitor"></Icon>
+                          热门酒店配置
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/hotelServicesConfig">
+                      <MenuItem name="15">
+                        <Icon type="monitor"></Icon>
+                          酒店服务配置
+                      </MenuItem>
+                    </router-link>
+
+                    <router-link to="/system/VersionUpdating">
+                      <MenuItem name="13">
+                        <Icon type="monitor"></Icon>
+                          版本管理
+                      </MenuItem>
+                    </router-link>
+                   <MenuGroup title="首页">
+                    <router-link to="/system/">
+                    <MenuItem name="5">
+                      <Icon type="home"></Icon>
+                      首页
+                    </MenuItem>
+                    </router-link>
+                  </MenuGroup> 
+                  <Submenu name="1">
+                      <template slot="title">
+                          <Icon type="person"></Icon>
+                          用户
+                      </template>
+                      <router-link to="/system/BusinessManagement">
+                      <MenuItem name="1-1">
+                        商家管理
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/AgentList">
+                      <MenuItem name="1-3">
+                        代理商列表
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/userList">
+                      <MenuItem name="1-2">
+                        用户列表
+                      </MenuItem>
+                    </router-link>
+                  </Submenu>
+
+                  <Submenu name="2">
+                      <template slot="title">
+                          <Icon type="ios-keypad"></Icon>
+                          业务
+                      </template>
+                      <router-link to="/system/ProductList">
+                      <MenuItem name="2-1">
+                        
+                        产品管理
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/OrderList">
+                      <MenuItem name="2-2">
+                       
+                        订单管理
+                      </MenuItem>
+                    </router-link>
+                  </Submenu>
+                  
+                  <Submenu name="3">
+                      <template slot="title">
+                          <Icon type="social-yen-outline"></Icon>
+                          财务
+                      </template>
+                      <router-link to="/system/BusinessWithdraw">
+                      <MenuItem name="3-1">
+                        
+                        商家提现
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/UserWithdraw">
+                      <MenuItem name="3-2">
+                        
+                        用户提现
+                      </MenuItem>
+                    </router-link>
+                  </Submenu>
+                  
+                  <Submenu name="4">
+                      <template slot="title">
+                          <Icon type="android-settings"></Icon>
+                          系统
+                      </template>
+                      <router-link to="/system/Pictureconfiguration">
+                      <MenuItem name="4-1">
+                        
+                        首页配置
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/SystemConfig">
+                      <MenuItem name="4-2">
+                        
+                        参数配置
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/PackageTypeConfig">
+                      <MenuItem name="4-3">
+                        
+                        首页分类配置
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/SystemAuthConfig">
+                      <MenuItem name="4-4">
+                        
+                        权限配置
+                      </MenuItem>
+                    </router-link>
+                     <router-link to="/system/RoleConfig">
+                      <MenuItem name="4-10">
+                        
+                        角色配置
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/AdminConfig">
+                      <MenuItem name="4-11">
+                        
+                        管理员配置
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/HotDecCategoryConfig">
+                      <MenuItem name="4-5">
+                        
+                        热门目的地类目配置
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/HotTopicCategoryConfig">
+                      <MenuItem name="4-6">
+                        
+                        热门专题类目配置
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/HotProductConfig">
+                      <MenuItem name="4-7">
+                        
+                        热门商品配置
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/ProductCategoryList">
+                      <MenuItem name="4-8">
+                       
+                        商品类目配置
+                      </MenuItem>
+                    </router-link>
+                    <router-link to="/system/ProductTagConfig">
+                      <MenuItem name="4-9">
+                        
+                        商品标签配置
+                      </MenuItem>
+                    </router-link>
+                  </Submenu>
+                  
+                  <Submenu name="5">
+                      <template slot="title">
+                          <Icon type="android-textsms"></Icon>
+                          推广
+                      </template>
+                      <router-link to="/system/Push">
+                      <MenuItem name="5-1">
+                        
+                         信息推送
+                      </MenuItem>
+                    </router-link>
+                  </Submenu> -->
+                </Menu>
+                </div>
+          </Sider>
+           <Layout >
+             <Header class="layout-header-bar1"> <p>{{list}}</p> </Header>
+            <Content>
+              <div class="Maincontent">
+                <!-- <div class="Maincontent_top"></div> -->
+                <router-view style="margin-top: 10px;"/></router-view>
+              </div>
+            </Content>
+          </Layout>
+    </Layout>
+
+  </div>
+</template>
+<script>
+  export default {
+    data() {
+      return {
+        Title: "用户",
+        list: "",
+        theme3: "dark",
+        menuList: [],
+        iconType: ["home","person","ios-keypad","document-text","social-yen-outline","android-settings","android-textsms","speakerphone"]
+      };
+    },
+    watch: {
+      $route(to, from) {  
+        console.log(to);  
+        console.log(from);
+      }
+    },
+    methods: {
+      change(title) {
+        this.list = title;
+        console.log(this.list)
+      },
+    },
+    mounted() {
+      //console.log(this.$router);
+
+      this.axios
+        .get(`${this.AjaxUrl}/ty_manage/system/auth/getLoginUserAuth`, {
+          params: {}
+        })
+        .then(res => {
+          this.menuList = res.data;
+          // this.total = res.data.total;
+        })
+        .catch(err => {});
+    }
+  };
+</script>
+<style>
+  .layout-header-bar1{
+      background: #fff !important;
+      box-shadow: 0 1px 1px rgba(0,0,0,.1);
+  }
+  .system {
+    height: 100%;
+  }
+  a{
+    color: #fff;
+  }
+  .Leftnavigation {
+    /* position: fixed; */
+    /* width: 240px; */
+    /* bottom: 0px;
+    left: 0px; */
+    /* height: 100%; */
+  }
+
+  .Maincontent_top {
+    background: #fff;
+    height: 60px;
+  }
+
+  .Maincontent {
+    width: 98%;
+    margin: 0 auto;
+    /* min-height: 1000px; */
+    overflow: auto;
+  }
+</style>

@@ -1,0 +1,93 @@
+import Vue from 'vue'
+import Router from 'vue-router'
+
+import system from '@/components/home'
+import login from '@/components/login'
+
+import index from '@/components/system/index'
+import BusinessManagement from '@/components/system/businessUser/BusinessManagement'
+import ProductList from '@/components/system/product/ProductList'
+import AgentList from '@/components/system/agentUser/AgentList'
+import userList from '@/components/system/user/userList'
+import Pictureconfiguration from '@/components/system/config/Pictureconfiguration'
+import OrderList from '@/components/system/order/OrderList'
+import SystemConfig from '@/components/system/config/systemConfig'
+import PackageTypeConfig from '@/components/system/config/ProductPackageTypeConfig'
+import SystemAuthConfig from '@/components/system/config/SystemAuthConfig'
+import BusinessWithdraw from '@/components/system/withdraw/BusinessWithdraw'
+import UserWithdraw from '@/components/system/withdraw/UserWithdraw'
+import HotProductConfig from '@/components/system/config/HotProductConfig'
+import HotDecCategoryConfig from '@/components/system/config/HotDecCategoryConfig'
+import HotTopicCategoryConfig from '@/components/system/config/HotTopicCategoryConfig'
+import Push from '@/components/system/promotion/Push'
+
+Vue.use(Router);
+
+
+const router = new Router({
+  routes: [{
+    path: '/',
+    name: 'login',
+    component: login
+  }, {
+    path: '/login',
+    name: 'login',
+    component: login
+  }, {
+    path: '/system/',
+    name: 'system',
+    component: system,
+    children: [
+      {
+        path: 'index',
+        component: index
+      }, {
+        path: 'BusinessManagement/',
+        component: BusinessManagement
+      }, {
+        path: 'ProductList/',
+        component: ProductList
+      }, {
+        path: 'AgentList/',
+        component: AgentList
+      }, {
+        path: 'userList/',
+        component: userList
+      }, {
+        path: 'Pictureconfiguration/',
+        component: Pictureconfiguration
+      }, {
+        path: 'OrderList/',
+        component: OrderList
+      }, {
+        path: 'SystemConfig/',
+        component: SystemConfig
+      }, {
+        path: 'PackageTypeConfig/',
+        component: PackageTypeConfig
+      }, {
+        path: 'SystemAuthConfig/',
+        component: SystemAuthConfig
+      }, {
+        path: 'BusinessWithdraw/',
+        component: BusinessWithdraw
+      }, {
+        path: 'UserWithdraw/',
+        component: UserWithdraw
+      }, {
+        path: 'HotProductConfig/',
+        component: HotProductConfig
+      }, {
+        path: 'HotDecCategoryConfig/',
+        component: HotDecCategoryConfig
+      }, {
+        path: 'HotTopicCategoryConfig/',
+        component: HotTopicCategoryConfig
+      },{
+        path: 'Push/',
+        component: Push
+      }
+    ]
+  }]
+})
+export default router
