@@ -33,6 +33,7 @@
       <Table border :loading="loading" :columns="TableTop" :data="tableData"></Table>
       <Page width="100%" :total="total" show-elevator style="text-align:right"></Page>
     </div>
+    <!-- 提现信息 -->
     <div v-if="info">
       <h2>提现信息</h2>
       <div class="datalist">
@@ -152,15 +153,26 @@
       title="提现确认"
       @on-ok="ok"
       @on-cancel="cancel">
-      <div>
-        <strong>打款方式：</strong>
-        <span v-if="businessWithdrawInfo.accountType == 'ALIPAY'">支付宝</span>
-        <span v-if="businessWithdrawInfo.accountType == 'WECHAT'">微信</span>
-        <span v-if="businessWithdrawInfo.accountType == 'UNIONPAY'">银联</span>
-        <br>
-        <strong>账户名称：</strong><span>{{businessWithdrawInfo.userAccountName}}</span><br>
-        <strong>提现账号：</strong><span>{{businessWithdrawInfo.account}}</span><br>
-        <strong>提现金额：</strong><span>{{businessWithdrawInfo.amount}} ￥</span>
+      <div class="successBox">
+        <p><strong>打款方式：</strong>
+            <RadioGroup v-model="accountType">
+                <Radio label="ALIPAY" >支付宝</Radio>
+                <Radio label="WECHAT">线下微信打款</Radio>
+            </RadioGroup>
+        </p>
+        
+        <!-- <p>
+          <strong>打款方式：</strong>
+          <span v-if="businessWithdrawInfo.accountType == 'ALIPAY'">支付宝</span>
+          <span v-if="businessWithdrawInfo.accountType == 'WECHAT'">微信</span>
+          <span v-if="businessWithdrawInfo.accountType == 'UNIONPAY'">银联</span>
+        </p> -->
+        <p><strong>提现金额：</strong><span>￥ {{businessWithdrawInfo.amount}}</span></p> 
+        <div v-if="accountType == 'ALIPAY'">
+          <p><strong>账户名称：</strong><span> {{businessWithdrawInfo.userAccountName}}</span></p> 
+          <p><strong>提现账号：</strong><span>{{businessWithdrawInfo.account}}</span></p> 
+        </div>
+        
       </div>
     </Modal>
     <!--审核不通过弹窗-->
@@ -187,6 +199,7 @@
     data: function () {
       return {
         loading: false,
+        accountType: "",
         businessWithdrawInfo: {
           // 提现申请信息
           userWithdrawId: null,
@@ -344,6 +357,7 @@
             title: "操作",
             key: "操作",
             align: "center",
+            // minWidth: 200,
             fixed: "right",
             render: (h, params) => {
               return h("div", [
@@ -366,6 +380,46 @@
                   "获取详情"
                 )
               ]);
+              // if(params.row.status == "INIT"){
+              //   return h("div", [
+              //     h(
+              //       "Button",
+              //       {
+              //         props: {
+              //           type: "primary",
+              //           size: "small"
+              //         },
+              //         style: {
+              //           marginRight: "5px"
+              //         },
+              //         on: {
+              //           click: () => {
+              //             this.audit('SUCCESS',params.index);
+              //           }
+              //         }
+              //       },
+              //       "审核通过"
+              //     ),
+              //     h(
+              //       "Button",
+              //       {
+              //         props: {
+              //           type: "error",
+              //           size: "small"
+              //         },
+              //         style: {
+              //           marginRight: "5px"
+              //         },
+              //         on: {
+              //           click: () => {
+              //             this.audit('FAIL',params.index);
+              //           }
+              //         }
+              //       },
+              //       "审核不通过"
+              //     ),
+              //   ]);
+              // }
             }
           }
         ],
@@ -403,7 +457,7 @@
       }
     },
     methods: {
-      audit(e) {
+      audit(e,index) {
         switch(e) {
           case 'SUCCESS':
             this.modal1 = true;
@@ -414,7 +468,9 @@
           default:
             return;
         }
+        this.accountType = "";
         this.auditStatus = e;
+        // this.businessWithdrawInfo = this.tableData[index];
       },
       /**
        * 取消
@@ -423,10 +479,12 @@
       cancel() {
         this.modal1 = false;
         this.modal2 = false;
+        this.accountType = "";
       },
       back() {
         this.info = false
       },
+      // 商家提现列表
       getList() {
         this.info = false;
         this.loading = true;
@@ -467,10 +525,10 @@
       },
       ok() {
         this.spinShow = true;
-        if (this.businessWithdrawInfo.status !== "INIT") {
-          this.$Message.error("不能重复审核");
-          return false;
-        }
+        // if (this.businessWithdrawInfo.status !== "INIT") {
+        //   this.$Message.error("不能重复审核");
+        //   return false;
+        // }
         let qs = require("qs");
         let data = {};
         let {userWithdrawId, checkMessage, withdrawNo} = this.businessWithdrawInfo;
@@ -484,8 +542,13 @@
             return false;
           }
         }
-        this.axios.post(
-            `${this.AjaxUrl}/ty_manage/user/withdraw/audit`,
+        let url = "";
+        if(this.accountType == "ALIPAY"){
+          url = `${this.AjaxUrl}/ty_manage/user/withdraw/audit`;
+        }else if(this.accountType == "WECHAT"){
+          url = `${this.AjaxUrl}/ty_manage/user/withdraw/auditwx`;
+        }
+        this.axios.post(url,
             qs.stringify(data)
           ).then(res => {
             if (res.errorCode === 200) {
@@ -493,6 +556,7 @@
               this.$Message.success(res.message);
               this.modal1 = false;
               this.getList();
+              
             } else {
               this.spinShow = false;
               console.log(res);
@@ -553,6 +617,10 @@
 
   .img {
     max-width: 300px;
+  }
+
+  .successBox p{
+    padding: 3px 0;
   }
 </style>
 

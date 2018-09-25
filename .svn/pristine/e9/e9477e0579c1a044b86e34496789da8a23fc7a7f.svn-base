@@ -1,0 +1,502 @@
+<template>
+  <div class="systemConfig">
+    <Form :label-width="80" style="padding-top:20px;">
+      <div class="FormItem">
+        <FormItem label="订单编号" class="FormItem_inp">
+          <Input v-model="queryParam.orderNo" clearable placeholder="请输入订单编号"></Input>
+        </FormItem>
+        <FormItem label="商家名称" class="FormItem_inp">
+          <!-- <Input v-model="queryParam.enterpriseName" clearable placeholder="请输入商家名称"></Input> -->
+          <Select v-model="queryParam.enterpriseName" clearable filterable>
+            <Option v-for="item in nameList" :value="item.enterpriseName" :key="item.value" @click.native="Comfort0(item.enterpriseName)">{{ item.enterpriseName }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="产品名称" class="FormItem_inp">
+          <Input v-model="queryParam.productName" clearable placeholder="请输入产品名称"></Input>
+        </FormItem>
+        <FormItem label="套餐名称" class="FormItem_inp">
+          <Input v-model="queryParam.packageName" clearable placeholder="请输入套餐名称"></Input>
+        </FormItem>
+      </div>
+      <div class="FormItem">
+        <FormItem label="订单状态" class="FormItem_inp">
+          <Select v-model="queryParam.status" clearable>
+            <Option v-for="item in statusList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="支付类型" class="FormItem_inp">
+          <Select v-model="queryParam.payType" clearable>
+            <Option v-for="item in payTypeList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem label="下单时间" class="FormItem_inp">
+          <DatePicker type="daterange" split-panels :options="datePickerOption" @on-change="createTimeChange" placeholder="请选择下单时间"></DatePicker>
+        </FormItem>
+        <FormItem label="支付时间" class="FormItem_inp">
+          <DatePicker type="daterange" split-panels :options="datePickerOption" @on-change="payTimeChange" placeholder="请选择支付时间"></DatePicker>
+        </FormItem>
+      </div>
+    </Form>
+    <div style="text-align:center;margin-bottom:10px;">
+      <Button type="success" @click="Comfort">搜索</Button>
+    </div>
+    <Table style="margin-bottom:8px;" width="80%" border :loading="loading" :columns="TableTop" :data="tableData"></Table>
+    <Page width="100%" @on-change="chang" :total="total" show-elevator style="text-align:right"></Page>
+  </div>
+</template>
+<script>
+  import {formatDate,getDate} from "../../../js/public";
+  export default {
+    data() {
+      return {
+        loading: true,
+        enterpriseName: "",
+        queryParam: {
+          pageNum: 1,
+          productName: null,
+          enterpriseName: null,
+          packageName: null,
+          status: null,
+          orderNo: null,
+          companyName: null,
+          createTimeStart: null,
+          createTimeEnd: null,
+          payTimeStart: null,
+          payTimeEnd: null,
+          payType: null
+        },
+        nameList: [],
+        nameList0: [],
+        statusList: [
+          {label: "未付款", value: "NON_PAY"},
+          {label: "已取消", value: "CANCEL"},
+          {label: "已付款/待验票", value: "PAY_SUCCESS"},
+          {label: "退款中", value: "ON_REFUND"},
+          {label: "退款成功", value: "REFUND_SUCCESS"},
+          {label: "退款失败", value: "REFUND_FAIL"},
+          {label: "验票成功/待评价", value: "TICKET_SUCCESS"},
+          {label: "已评价", value: "COMMENT_SUCCESS"},
+          {label: "已过期", value: "INVALID_TICKET"},
+          {label: "智游宝下单失败", value: "ZYB_FAIL"},
+          
+        ],
+        payTypeList: [
+          {label: "支付宝", value: "ALIPAY"},
+          {label: "微信", value: "WECHAT"},
+          {label: "银联", value: "UNIONPAY"}
+        ],
+        datePickerOption: {
+          disabledDate (date) {
+            return date && date.valueOf() > Date.now();
+          },
+          shortcuts: [
+            {
+              text: '最近7天',
+              value () {
+                const end = new Date();
+                const start = new Date();
+                start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+                return [start, end];
+              }
+            },
+            {
+              text: '最近30天',
+              value () {
+                const end = new Date();
+                const start = new Date();
+                start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
+                return [start, end];
+              }
+            },
+            {
+              text: '最近90天',
+              value () {
+                const end = new Date();
+                const start = new Date();
+                start.setTime(start.getTime() - 3600 * 1000 * 24 * 90);
+                return [start, end];
+              }
+            }
+          ]
+        },
+        total: 0,
+        tableData: [],
+        TableTop: [
+          {
+            title: "订单编号",
+            key: "orderNo",
+            align: "center",
+            width: 140,
+            fixed: "left"
+          },
+          {
+            title: "api类型",
+            key: "apiType",
+            width: 100,
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              switch (params.row.apiType) {
+                case "TONGYOU":
+                  text = "同游平台";
+                  break;
+                case "ZYB":
+                  text = "智游宝";
+                  break;
+                default:
+                  break;
+              }
+              return h("div", [
+                h("strong", text)
+              ]);
+            }
+          },
+          // {
+          //   title: "订单类型",
+          //   key: "orderType",
+          //   width: 100,
+          //   align: "center",
+          //   render: (h, params) => {
+          //     let text = "";
+          //     switch (params.row.orderType) {
+          //       case "NORMAL":
+          //         text = "普通订单";
+          //         break;
+          //       case "PLUS":
+          //         text = "PLUS订单";
+          //         break;
+          //       default:
+          //         break;
+          //     }
+          //     return h("div", [
+          //       h("strong", text)
+          //     ]);
+          //   }
+          // },
+          {
+            title: "注册手机号",
+            key: "mobile",
+            width: 140,
+            align: "center"
+          },
+          {
+            title: "第三方订单号",
+            key: "apiOrderNo",
+            width: 140,
+            align: "center"
+          },
+          {
+            title: "第三方验票码",
+            key: "apiCheckCode",
+            width: 140,
+            align: "center"
+          },
+          {
+            title: "同游验票码",
+            key: "checkCode",
+            width: 100,
+            align: "center"
+          },
+          {
+            title: "商家名称",
+            key: "enterpriseName",
+            width: 140,
+            align: "center"
+          },
+          {
+            title: "下单时间",
+            key: "createTime",
+            width: 140,
+            align: "center",
+            render: (h, params) => {
+              return h("div", [
+                h("strong", formatDate(params.row.createTime, "yyyy-MM-dd HH:mm"))
+              ]);
+            }
+          },
+          {
+            title: "订单状态",
+            key: "status",
+            width: 100,
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              switch (params.row.status) {
+                case "NON_PAY":
+                  text = "未付款";
+                  break;
+                case "CANCEL":
+                  text = "已取消";
+                  break;
+                case "PAY_SUCCESS":
+                  text = "已付款/待验票";
+                  break;
+                case "ON_REFUND":
+                  text = "退款中";
+                  break;
+                case "REFUND_SUCCESS":
+                  text = "退款成功";
+                  break;
+                case "REFUND_FAIL":
+                  text = "退款失败";
+                  break;
+                case "TICKET_SUCCESS":
+                  text = "验票成功/待评价";
+                  break;
+                case "COMMENT_SUCCESS":
+                  text = "已评价";
+                  break;
+                case "ZYB_FAIL":
+                  text = "智游宝下单失败";
+                  break;
+                case "INVALID_TICKET":
+                  text = "已过期";
+                  break;
+              }
+              return h("div", [
+                h("strong", text)
+              ]);
+            }
+          },
+          {
+            title: "订单总金额",
+            key: "orderPrice",
+            width: 100,
+            align: "center"
+          },
+          {
+            title: "产品名称",
+            key: "productName",
+            width: 140,
+            align: "center"
+          },
+          {
+            title: "套餐名称",
+            key: "packageName",
+            width: 140,
+            align: "center"
+          },
+          {
+            title: "单价",
+            key: "salePrice",
+            width: 100,
+            align: "center"
+          },
+          {
+            title: "购买数量",
+            key: "buySum",
+            width: 100,
+            align: "center"
+          },
+          {
+            title: "支付方式",
+            key: "payType",
+            width: 100,
+            align: "center",
+            render: (h, params) => {
+              let text = "";
+              switch (params.row.payType) {
+                case "ALIPAY":
+                  text = "支付宝";
+                  break;
+                case "WECHAT":
+                  text = "微信";
+                  break;
+                case "UNIONPAY":
+                  text = "银联";
+                  break;
+                case "WECHAT_PUBLIC":
+                  text = "公众号";
+                  break;
+                case "ACTIVITY":
+                  text = "活动";
+                  break;
+                default:
+                  text = "未支付";
+                  break;
+              }
+              return h("div", [
+                h("strong", text)
+              ]);
+            }
+          },
+          {
+            title: "支付金额",
+            key: "payAmount",
+            width: 100,
+            align: "center"
+          },
+          {
+            title: "游玩时间",
+            key: "arriveTime",
+            width: 140,
+            align: "center",
+            render: (h, params) => {
+              return h("div", [
+                h("strong", getDate(params.row.arriveTime))
+              ]);
+            }
+          },
+          {
+            title: "代理商",
+            key: "companyName",
+            width: 140,
+            align: "center",
+            render: (h, params) => {
+              let text = params.row.companyName;
+              if(params.row.companyName == null || params.row.companyName ==""){
+                text = params.row.legalRepresentativeName;
+              } 
+              console.log(params.row.legalRepresentativeName)
+              return h("div", [
+                h("span", text)
+              ]);
+            }
+          },
+          {
+            title: "业务员",
+            key: "saleName",
+            width: 140,
+            align: "center"
+          },
+          {
+            title: "下单用户",
+            key: "userName",
+            width: 140,
+            align: "center"
+          },
+          {
+            title: "真实姓名",
+            key: "realname",
+            width: 110,
+            align: "center"
+          },
+          {
+            title: "联系人手机号",
+            key: "customerMobile",
+            width: 140,
+            align: "center"
+          },
+          {
+            title: "身份证",
+            key: "identityCard",
+            width: 160,
+            align: "center"
+          },
+          {
+            title: "收货地址",
+            key: "actualAaddress",
+            width: 160,
+            align: "center"
+          },
+        ]
+      };
+    },
+    methods: {
+      chang(pageNum) {
+        this.queryParam.pageNum = pageNum;
+        this.Comfort();
+      },
+      // 商家下拉列表
+      selectList() {
+        this.axios
+          .get(`${this.AjaxUrl}/ty_manage/business/user/info/getSelectList`, {
+            params: {
+              // name: this.queryParam.enterpriseName
+            }
+          })
+          .then(res => {
+            if (res.errorCode === 200) {
+              this.nameList = res.data;
+              console.log(this.nameList);
+            } else {
+              this.$Message.error(res.message);
+            }
+          })
+          .catch(err => {
+            console.log(err);
+          });
+      },
+      Comfort0(val) {
+        this.loading = true;
+        let data = {};
+        data.pageNum = 1;
+        if(val != null || val != ""){
+          data.enterpriseName = val;
+          this.queryParam.enterpriseName = val;
+        }else {
+          data.enterpriseName = null;
+        }
+        console.log(data)
+        this.axios
+          .get(`${this.AjaxUrl}/ty_manage/order/getList`, {
+            params: data
+          })
+          .then(res => {
+            if (res.errorCode === 200) {
+              this.loading = false;
+              this.tableData = res.data.list;
+              this.total = res.data.total;
+            } else {
+              this.$Message.error(res.message);
+            }
+          })
+          .catch(err => {
+            console.log(err);
+          });
+        
+      },
+      // 列表
+      Comfort() {
+        this.loading = true;
+        let data = this.queryParam;
+        console.log(data)
+        this.axios
+          .get(`${this.AjaxUrl}/ty_manage/order/getList`, {
+            params: data
+          })
+          .then(res => {
+            if (res.errorCode === 200) {
+              this.loading = false;
+              this.tableData = res.data.list;
+              this.total = res.data.total;
+            } else {
+              this.$Message.error(res.message);
+            }
+          })
+          .catch(err => {
+            console.log(err);
+          });
+        
+      },
+      createTimeChange(date) {
+        this.queryParam.createTimeStart = date[0];
+        this.queryParam.createTimeEnd = date[1] + " 23:59:59.999"
+      },
+      payTimeChange(date) {
+        this.queryParam.payTimeStart = date[0];
+        this.queryParam.payTimeEnd = date[1] + " 23:59:59.999"
+      },
+    },
+    mounted() {
+      this.Comfort();
+      this.selectList();
+    }
+  };
+</script>
+
+<style scoped>
+  .OrderList {
+    background: #fff;
+    padding: 0 20px;
+  }
+
+  .FormItem {
+    display: flex;
+  }
+
+  .FormItem_inp {
+    width: 300px;
+    flex: 1;
+  }
+</style>

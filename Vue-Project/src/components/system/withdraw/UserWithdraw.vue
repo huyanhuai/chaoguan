@@ -117,14 +117,25 @@
       @on-ok="ok"
       @on-cancel="cancel">
       <div>
-        <strong>打款方式：</strong>
+        <p><strong>打款方式：</strong>
+            <RadioGroup v-model="accountType">
+                <Radio label="ALIPAY" >支付宝</Radio>
+                <Radio label="WECHAT">线下微信打款</Radio>
+            </RadioGroup>
+        </p>
+        <!-- <strong>打款方式：</strong>
         <span v-if="userWithdrawInfo.accountType == 'ALIPAY'">支付宝</span>
         <span v-if="userWithdrawInfo.accountType == 'WECHAT'">微信</span>
         <span v-if="userWithdrawInfo.accountType == 'UNIONPAY'">银联</span>
-        <br>
-        <strong>账户名称：</strong><span>{{userWithdrawInfo.userAccountName}}</span><br>
-        <strong>提现账号：</strong><span>{{userWithdrawInfo.account}}</span><br>
+        <br> -->
         <strong>提现金额：</strong><span>{{userWithdrawInfo.amount}} ￥</span>
+        <br>
+        <div v-if="accountType == 'ALIPAY'">
+          <strong>账户名称：</strong><span>{{userWithdrawInfo.userAccountName}}</span><br>
+          <strong>提现账号：</strong><span>{{userWithdrawInfo.account}}</span>
+        </div>
+        
+        
       </div>
     </Modal>
     <!--审核不通过弹窗-->
@@ -151,6 +162,7 @@
     data: function () {
       return {
         loading: false,
+        accountType: "",
         userWithdrawInfo: {
           // 提现申请信息
           userWithdrawId: null,
@@ -390,6 +402,7 @@
           default:
             return;
         }
+        this.accountType = "";
         this.auditStatus = e;
       },
       /**
@@ -463,8 +476,13 @@
             return false;
           }
         }
-        this.axios.post(
-            `${this.AjaxUrl}/ty_manage/user/withdraw/audit`,
+        let url = "";
+        if(this.accountType == "ALIPAY"){
+          url = `${this.AjaxUrl}/ty_manage/user/withdraw/audit`;
+        }else if(this.accountType == "WECHAT"){
+          url = `${this.AjaxUrl}/ty_manage/user/withdraw/auditwx`;
+        }
+        this.axios.post(url,
             qs.stringify(data)
           ).then(res => {
             if (res.errorCode === 200) {
