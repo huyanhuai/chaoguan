@@ -76,7 +76,9 @@
           {label: "退款失败", value: "REFUND_FAIL"},
           {label: "验票成功/待评价", value: "TICKET_SUCCESS"},
           {label: "已评价", value: "COMMENT_SUCCESS"},
-          {label: "智游宝下单失败", value: "ZYB_FAIL"}
+          {label: "已过期", value: "INVALID_TICKET"},
+          {label: "智游宝下单失败", value: "ZYB_FAIL"},
+          
         ],
         payTypeList: [
           {label: "支付宝", value: "ALIPAY"},
@@ -246,6 +248,9 @@
                   break;
                 case "ZYB_FAIL":
                   text = "智游宝下单失败";
+                  break;
+                case "INVALID_TICKET":
+                  text = "已过期";
                   break;
               }
               return h("div", [

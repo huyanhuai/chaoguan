@@ -162,6 +162,9 @@ import {getDate,formatDate} from "../../../js/public";
                         case "ZYB_FAIL":
                         text = "智游宝下单失败";
                         break;
+                        case "INVALID_TICKET":
+                        text = "已过期";
+                        break;
                     }
                     return h("div", [
                         h("strong", text)
